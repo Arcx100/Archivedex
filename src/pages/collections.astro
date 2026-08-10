@@ -1,0 +1,126 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { games, categories } from "../data/games";
+
+const catGradient: Record<string, { from: string; to: string }> = {
+  "Essential Collection": { from: "#06b6d4", to: "#7c3aed" },
+  "Must Play":            { from: "#7c3aed", to: "#db2777" },
+  "Story Focused":        { from: "#7c3aed", to: "#4338ca" },
+  "Open World":           { from: "#059669", to: "#0891b2" },
+  "Roguelike":            { from: "#ea580c", to: "#dc2626" },
+  "Difficulty":           { from: "#dc2626", to: "#9f1239" },
+  "Fakemon":              { from: "#d97706", to: "#b45309" },
+  "Competitive":          { from: "#0891b2", to: "#1d4ed8" },
+  "Anime Inspired":       { from: "#db2777", to: "#7c3aed" },
+  "Historical Classic":   { from: "#92400e", to: "#78350f" },
+  "Hidden Gem":           { from: "#059669", to: "#047857" },
+  "Experimental":         { from: "#6d28d9", to: "#4c1d95" },
+  "Collector Only":       { from: "#374151", to: "#1f2937" },
+  "PMD Inspired":         { from: "#0d9488", to: "#134e4a" },
+};
+
+const collectionMeta: Record<string, {
+  icon: string; accent: string; badge: string; description: string;
+}> = {
+  "Essential Collection": { icon:"✦", accent:"text-cyan-300",   badge:"border-cyan-400/30 bg-cyan-400/10 text-cyan-300",     description:"The non-negotiables. These define what the fan game space can be — polished, ambitious, and worth every hour." },
+  "Must Play":            { icon:"◆", accent:"text-violet-300", badge:"border-violet-400/30 bg-violet-400/10 text-violet-300", description:"One tier below essential, but only just. Each earns a strong recommendation without hesitation." },
+  "Story Focused":        { icon:"◈", accent:"text-violet-300", badge:"border-violet-400/30 bg-violet-400/10 text-violet-300", description:"For players who want Pokémon to feel like a real RPG. These lead with narrative, character, and world-building." },
+  "Open World":           { icon:"⬡", accent:"text-emerald-300",badge:"border-emerald-400/30 bg-emerald-400/10 text-emerald-300",description:"Non-linear, explorer-first design. Go anywhere, challenge gyms in any order, shape your own path." },
+  "Roguelike":            { icon:"⚄", accent:"text-orange-300", badge:"border-orange-400/30 bg-orange-400/10 text-orange-300", description:"Runs, randomisation, and replayability. Each attempt is a different experience by design." },
+  "Experimental":         { icon:"⟁", accent:"text-fuchsia-300",badge:"border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-300",description:"Games that break the mold — fusion systems, reinvented mechanics, or concepts without precedent." },
+  "Historical Classic":   { icon:"◉", accent:"text-amber-300",  badge:"border-amber-500/30 bg-amber-500/10 text-amber-300",   description:"Preservation-worthy entries that shaped the fan game space. The roots — important to understand, still worth playing." },
+  "Difficulty":           { icon:"⚔", accent:"text-red-300",    badge:"border-red-400/30 bg-red-400/10 text-red-300",         description:"For players who find official Pokémon too easy. Built around challenge, precision, and team-building depth." },
+  "Fakemon":              { icon:"★", accent:"text-pink-300",   badge:"border-pink-400/30 bg-pink-400/10 text-pink-300",      description:"Entirely original Pokémon, designed from scratch. These stand on the strength of their own creature designs." },
+  "Competitive":          { icon:"⊞", accent:"text-blue-300",   badge:"border-blue-400/30 bg-blue-400/10 text-blue-300",      description:"Focused on battle systems, teambuilding, and mechanics. Prioritise the competitive layer above all." },
+  "Anime Inspired":       { icon:"◐", accent:"text-rose-300",   badge:"border-rose-400/30 bg-rose-400/10 text-rose-300",      description:"Games that feel like a love letter to the anime — following a trainer's journey with episodic spirit." },
+  "Hidden Gem":           { icon:"💎",accent:"text-emerald-300",badge:"border-emerald-400/30 bg-emerald-400/10 text-emerald-300",description:"Overlooked and underrated entries with genuine quality. Worth discovering before the crowd finds them." },
+  "Collector Only":       { icon:"▣", accent:"text-slate-400",  badge:"border-slate-600 bg-slate-800/60 text-slate-400",      description:"Archival entries of historical or technical interest. For completionists and preservation enthusiasts." },
+  "PMD Inspired":         { icon:"🗝", accent:"text-teal-300",   badge:"border-teal-400/30 bg-teal-400/10 text-teal-300",      description:"Mystery Dungeon-style design — playable Pokémon, procedural floors, and recruitment systems instead of a standard trainer journey." },
+};
+
+const collections = categories.map((cat) => {
+  const entries = games.filter(g => g.category === cat).sort((a,b) => b.rating - a.rating);
+  const grad = catGradient[cat] ?? { from: "#334155", to: "#1e293b" };
+  const meta = collectionMeta[cat] ?? {
+    icon: "◆", accent: "text-slate-300",
+    badge: "border-slate-600 bg-slate-800 text-slate-300",
+    description: `Curated ArchiveDex entries classified as ${cat.toLowerCase()}.`,
+  };
+  return { name: cat, count: entries.length, top: entries.slice(0, 3), grad, ...meta };
+});
+---
+
+<BaseLayout title="Collections · ArchiveDex" description="Curated themed collections across the Pokémon fan project archive.">
+  <main class="mx-auto max-w-7xl px-6 py-12">
+
+    <header class="mb-10" data-reveal>
+      <p class="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">Curated discovery</p>
+      <h1 class="mt-2 text-5xl font-black text-white">Collections</h1>
+      <p class="mt-4 max-w-2xl text-slate-400">
+        Guided routes through the archive. Each one has a reason to exist and a specific player in mind.
+      </p>
+    </header>
+
+    <div class="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+      {collections.map((col) => (
+        <div class="tilt-card group relative flex flex-col overflow-hidden rounded-[1.5rem] border border-slate-700/60 bg-[#0d1117] transition-all duration-300 hover:-translate-y-1 hover:border-slate-600/80 hover:shadow-[0_24px_64px_rgba(0,0,0,0.45)]" data-reveal="scale">
+          <div class="tilt-glare"></div>
+
+          <!-- Cover panel -->
+          <div
+            class="cover-card relative h-36 w-full shrink-0"
+            style={`background: linear-gradient(135deg, ${col.grad.from}, ${col.grad.to})`}
+          >
+            <!-- Noise -->
+            <div class="absolute inset-0 opacity-[0.15]" style={`background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E"); background-size: 150px 150px; z-index:1;`}></div>
+            <!-- Big icon -->
+            <div class="absolute inset-0 flex items-center justify-center text-9xl opacity-[0.13] select-none" style="z-index:2">{col.icon}</div>
+            <!-- Bottom overlay (cover-card::after handles gradient, but we add text on top) -->
+            <div class="absolute inset-x-0 bottom-0 flex items-end justify-between px-5 pb-4" style="z-index:5">
+              <span class="text-xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">{col.name}</span>
+              <span class={`rounded-full border px-2.5 py-0.5 text-xs font-black backdrop-blur-sm ${col.badge}`}>
+                {col.count} {col.count === 1 ? "entry" : "entries"}
+              </span>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="flex flex-1 flex-col p-5">
+            <p class="mb-4 text-sm leading-6 text-slate-400">{col.description}</p>
+
+            <!-- Top entries -->
+            {col.top.length > 0 && (
+              <div class="mb-4 grid gap-1.5">
+                {col.top.map((game, i) => (
+                  <a
+                    href={`/games/${game.id}`}
+                    class="flex items-center justify-between rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2.5 transition hover:border-slate-700 hover:bg-slate-900/80"
+                  >
+                    <div class="flex min-w-0 items-center gap-2.5">
+                      <span class="w-4 shrink-0 text-xs font-black text-slate-700">#{i+1}</span>
+                      <div class="min-w-0">
+                        <div class="truncate text-sm font-black text-white">{game.name}</div>
+                        <div class="text-[11px] text-slate-600">{game.type} · {game.runtime}</div>
+                      </div>
+                    </div>
+                    <div class="ml-3 shrink-0 rounded-lg border border-yellow-400/25 bg-yellow-400/8 px-2 py-0.5 text-sm font-black text-yellow-300">
+                      {game.rating}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            <!-- CTA -->
+            <a
+              href={`/library?category=${encodeURIComponent(col.name)}`}
+              class={`mt-auto flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-black transition hover:opacity-80 ${col.badge}`}
+            >
+              Browse {col.name} →
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+  </main>
+</BaseLayout>

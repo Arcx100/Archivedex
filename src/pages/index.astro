@@ -1,0 +1,620 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import GameCard from "../components/GameCard.astro";
+import { games } from "../data/games";
+
+const featured  = games.slice(0, 4);
+const topRated  = [...games].sort((a, b) => b.rating - a.rating).slice(0, 5);
+const totalGames = games.length;
+const romHacks   = games.filter(g => g.type === "ROM Hack").length;
+const fanGames   = games.filter(g => g.type === "Fan Game").length;
+const complete   = games.filter(g => g.status === "Complete").length;
+const newRegion  = games.filter(g => g.tags.includes("New Region")).length;
+const highRated  = games.filter(g => g.rating >= 9.0).length;
+
+const collections = [
+  {
+    title: "Essential Collection",
+    count: games.filter((g) => g.category === "Essential Collection").length,
+    icon: "✦",
+    href: "/library?category=Essential%20Collection",
+    from: "#06b6d4", to: "#7c3aed",
+  },
+  {
+    title: "Story Focused",
+    count: games.filter((g) => g.category === "Story Focused").length,
+    icon: "◈",
+    href: "/library?category=Story%20Focused",
+    from: "#7c3aed", to: "#4338ca",
+  },
+  {
+    title: "Open World",
+    count: games.filter((g) => g.category === "Open World").length,
+    icon: "⬡",
+    href: "/library?category=Open%20World",
+    from: "#059669", to: "#0891b2",
+  },
+  {
+    title: "Roguelike",
+    count: games.filter((g) => g.category === "Roguelike").length,
+    icon: "✧",
+    href: "/library?category=Roguelike",
+    from: "#ea580c", to: "#dc2626",
+  },
+];
+
+const gemPool    = games.filter(g => g.category === "Hidden Gem").sort((a, b) => b.rating - a.rating);
+const anchorGem  = gemPool[0] ?? null;
+const otherGems  = gemPool.slice(1, 3);
+const hiddenGems = [anchorGem, ...otherGems].filter(Boolean);
+
+const siteGuide = [
+  { icon: "📚", title: "Library",      href: "/library",      desc: "Search & filter all games",     color: "rgba(34,211,238,0.12)", accent: "#67e8f9"  },
+  { icon: "✦",  title: "Collections",  href: "/collections",  desc: "Best-of curated lists",         color: "rgba(253,224,71,0.12)", accent: "#fde047"  },
+  { icon: "◈",  title: "Game Detail",  href: "/library",      desc: "Full info per title",           color: "rgba(196,181,253,0.12)",accent: "#c4b5fd"  },
+  { icon: "📋", title: "Source Notes", href: "/source-notes", desc: "How we rate & source",          color: "rgba(110,231,183,0.12)",accent: "#6ee7b7"  },
+];
+
+const tips = [
+  { icon: "🔍", tip: "Search by tags, mood, or engine — not just by title. Try 'dark story' or 'quality of life'." },
+  { icon: "⭐", tip: "Ratings are curated quality scores, not popularity. A 9.2 and a 9.8 are both exceptional." },
+  { icon: "🗂️", tip: "Use Collections if you're unsure where to start. They cut straight to the best of each style." },
+];
+---
+
+<BaseLayout title="ArchiveDex · Pokémon Fan Project Archive" description="Premium discovery archive for Pokémon ROM hacks, fangames, PMD hacks, and fan projects.">
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- WELCOME MODAL                              -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="welcome-overlay" class="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-md" style="display:none">
+    <div class="glass-panel relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] p-8">
+      <div class="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_30%_20%,rgba(34,211,238,0.16),transparent_60%)]"></div>
+      <div class="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_80%_80%,rgba(168,85,247,0.12),transparent_55%)]"></div>
+      <div class="relative">
+        <div class="mb-7 flex items-start justify-between gap-4">
+          <div>
+            <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase tracking-widest text-cyan-300">✦ Welcome to ArchiveDex</div>
+            <h2 class="text-3xl font-black leading-tight text-white">Your guide to Pokémon fan games</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-400">A curated discovery archive for ROM hacks, fangames, PMD hacks, and fan projects.</p>
+          </div>
+          <button id="welcome-close-x" aria-label="Close" class="shrink-0 rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-sm font-bold text-slate-400 transition hover:border-slate-600 hover:text-slate-200">✕</button>
+        </div>
+
+        <p class="mb-3 text-xs font-black uppercase tracking-[0.2em] text-slate-500">What's inside</p>
+        <div class="mb-7 grid gap-3 sm:grid-cols-2">
+          {siteGuide.map((s) => (
+            <a href={s.href} class="group rounded-2xl border border-slate-700/50 p-4 transition hover:-translate-y-0.5" style={`background:${s.color};`}>
+              <div class="mb-2 flex items-center gap-2">
+                <span class="text-lg">{s.icon}</span>
+                <span class="text-sm font-black" style={`color:${s.accent}`}>{s.title}</span>
+              </div>
+              <p class="text-xs leading-5 text-slate-400">{s.desc}</p>
+            </a>
+          ))}
+        </div>
+
+        <p class="mb-3 text-xs font-black uppercase tracking-[0.2em] text-slate-500">Quick tips</p>
+        <div class="mb-7 grid gap-2">
+          {tips.map((item) => (
+            <div class="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+              <span class="text-base">{item.icon}</span>
+              <p class="text-sm leading-5 text-slate-300">{item.tip}</p>
+            </div>
+          ))}
+        </div>
+
+        <button id="welcome-close" class="w-full rounded-2xl bg-cyan-300 py-4 font-black text-slate-950 transition hover:bg-cyan-200 active:scale-[0.98]">
+          Start Exploring →
+        </button>
+        <p class="mt-3 text-center text-xs text-slate-600">This guide won't appear again. Find it again via Source Notes.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- I'M FEELING LUCKY MODAL                   -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="lucky-overlay" class="fixed inset-0 z-[998] flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-md" style="display:none">
+    <div class="glass-panel relative w-full max-w-lg rounded-[2rem] p-8">
+      <div class="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_20%_30%,rgba(168,85,247,0.20),transparent_55%)]"></div>
+      <div class="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_80%_70%,rgba(34,211,238,0.12),transparent_50%)]"></div>
+      <div class="relative">
+        <div class="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <div class="mb-2 inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-xs font-black uppercase tracking-widest text-violet-300">🎲 I'm Feeling Lucky</div>
+            <h2 class="text-2xl font-black text-white">Find your next game</h2>
+            <p class="mt-1 text-sm text-slate-400">Answer 3 quick questions for a personalised pick.</p>
+          </div>
+          <button id="lucky-close-x" class="shrink-0 rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-sm font-bold text-slate-400 transition hover:border-slate-600 hover:text-slate-200">✕</button>
+        </div>
+        <div class="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+          <div id="lucky-progress" class="h-1.5 rounded-full bg-gradient-to-r from-violet-400 to-cyan-400 transition-all duration-500" style="width:0%"></div>
+        </div>
+        <div id="lucky-question-area">
+          <p id="lucky-step-label" class="mb-1 text-xs font-black uppercase tracking-[0.25em] text-slate-500">Step 1 of 3</p>
+          <p id="lucky-question-text" class="mb-5 text-lg font-black text-white"></p>
+          <div id="lucky-options" class="grid gap-3"></div>
+        </div>
+        <div id="lucky-result-area" class="hidden">
+          <p class="mb-4 text-xs font-black uppercase tracking-[0.25em] text-violet-300">Your pick</p>
+          <a id="lucky-result-link" href="#" class="group block rounded-2xl border border-violet-400/40 bg-violet-400/10 p-5 transition hover:border-violet-400/60 hover:bg-violet-400/15">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div id="lucky-result-name" class="text-xl font-black text-white group-hover:text-violet-200"></div>
+                <div id="lucky-result-meta" class="mt-1 text-sm text-slate-400"></div>
+                <div id="lucky-result-desc" class="mt-3 text-sm leading-6 text-slate-300"></div>
+              </div>
+              <div id="lucky-result-rating" class="shrink-0 rounded-xl border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-sm font-black text-yellow-300"></div>
+            </div>
+          </a>
+          <div class="mt-4 flex gap-3">
+            <button id="lucky-retry" class="flex-1 rounded-2xl border border-slate-700 py-3 text-sm font-black text-slate-300 transition hover:border-slate-600 hover:text-white">Try again</button>
+            <a id="lucky-go" href="#" class="flex-1 rounded-2xl bg-violet-400 py-3 text-center text-sm font-black text-slate-950 transition hover:bg-violet-300">View full page →</a>
+          </div>
+        </div>
+        <button id="lucky-back" class="mt-4 hidden text-xs font-black text-slate-500 transition hover:text-slate-300">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <main>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- HERO                               -->
+    <!-- ═══════════════════════════════════ -->
+    <section class="mx-auto max-w-7xl px-6 py-10">
+      <div class="glass-panel relative overflow-hidden rounded-[2rem] spotlight-active">
+        <!-- Background glows -->
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_75%_30%,rgba(34,211,238,0.22),transparent_26rem)]"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_88%_15%,rgba(168,85,247,0.18),transparent_22rem)]"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_8%_85%,rgba(245,158,11,0.07),transparent_20rem)]"></div>
+
+        <!-- Cursor spotlight -->
+        <div class="spotlight"></div>
+
+        <!-- Ambient particles -->
+        <div class="particle-field">
+          {Array.from({ length: 18 }).map((_, i) => {
+            const left     = (i * 113.7) % 98;
+            const duration = 8 + (i % 6) * 1.2;
+            const delay    = (i % 9) * -1.6;
+            const size     = i % 4 === 0 ? "0.7rem" : "0.38rem";
+            const glyphs   = ["✦","◆","✧","◈","⬡","★"];
+            const glyph    = glyphs[i % glyphs.length];
+            const colors   = ["text-cyan-300/40","text-violet-300/30","text-yellow-300/25","text-emerald-300/30"];
+            const color    = colors[i % colors.length];
+            return (
+              <span
+                class={`particle ${color}`}
+                style={`left:${left}%; font-size:${size}; --p-duration:${duration}s; --p-delay:${delay}s; --p-opacity:0.4; --p-dx:${(i % 7 - 3) * 12}px;`}
+              >{glyph}</span>
+            );
+          })}
+        </div>
+
+        <div class="relative grid gap-10 p-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-12">
+
+          <!-- Left: copy -->
+          <div class="flex flex-col justify-center">
+
+            <!-- Label chip -->
+            <div class="mb-5 flex flex-wrap items-center gap-2" data-reveal>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-cyan-300">
+                ✦ <span data-counter={totalGames} data-counter-duration="800">0</span> entries archived
+              </span>
+              <button id="open-guide" class="magnetic-btn flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:border-cyan-400/40 hover:text-cyan-300">
+                ? How to use
+              </button>
+            </div>
+
+            <!-- H1 — staggered per-word reveal -->
+            <h1 class="text-6xl font-black leading-[0.92] tracking-tight md:text-7xl">
+              <span class="block" data-reveal style="--reveal-delay:0ms"><span class="text-white">Discover.</span></span>
+              <span class="block" data-reveal style="--reveal-delay:90ms"><span class="text-cyan-300 text-glow-cyan">Compare.</span></span>
+              <span class="block" data-reveal style="--reveal-delay:180ms"><span class="text-violet-300 text-glow-violet">Preserve.</span></span>
+            </h1>
+
+            <p class="mt-6 max-w-lg text-lg font-bold leading-7 text-slate-300" data-reveal style="--reveal-delay:240ms">
+              The definitive archive for Pokémon fan games, ROM hacks, and preservation-worthy projects.
+            </p>
+
+            <!-- Search -->
+            <form class="mt-8 max-w-lg" action="/library" data-reveal style="--reveal-delay:300ms">
+              <div class="flex gap-2.5">
+                <div class="relative flex-1">
+                  <input
+                    name="q"
+                    placeholder="Search games, features, regions…"
+                    class="w-full rounded-2xl border border-slate-700 bg-slate-950/80 py-4 pl-5 pr-16 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.12)]"
+                  />
+                  <span class="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">⌘K</span>
+                </div>
+                <button class="magnetic-btn shrink-0 rounded-2xl bg-cyan-300 px-6 font-black text-slate-950 transition hover:bg-cyan-200 active:scale-95">
+                  Search
+                </button>
+              </div>
+            </form>
+
+            <!-- CTA row -->
+            <div class="mt-5 flex flex-wrap items-center gap-3" data-reveal style="--reveal-delay:360ms">
+              <a href="/library" class="magnetic-btn flex items-center gap-2 rounded-2xl bg-cyan-300 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:bg-cyan-200 active:scale-95">
+                Explore Archive →
+              </a>
+              <button id="open-lucky" class="magnetic-btn flex items-center gap-2 rounded-2xl border border-violet-400/50 bg-violet-400/10 px-5 py-2.5 text-sm font-black text-violet-300 transition hover:border-violet-400/70 hover:bg-violet-400/15">
+                🎲 I'm Feeling Lucky
+              </button>
+            </div>
+
+            <button id="open-lucky-link" class="mt-3 w-fit text-xs text-slate-600 underline-offset-2 transition hover:text-slate-400 hover:underline" data-reveal style="--reveal-delay:400ms">
+              I'm Feeling Lucky — find my next game
+            </button>
+          </div>
+
+          <!-- Right: visual panel -->
+          <div class="relative min-h-[380px] overflow-hidden rounded-[1.5rem] border border-slate-700/60 bg-slate-950/40 p-6" data-reveal="right" style="--reveal-delay:120ms">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(34,211,238,0.20),transparent_16rem)]"></div>
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_60%_75%,rgba(168,85,247,0.14),transparent_18rem)]"></div>
+
+            <div class="relative flex h-full flex-col justify-between gap-6">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">Archive Signal</div>
+                  <div class="mt-1.5 text-2xl font-black text-white">Fan Project Index</div>
+                </div>
+                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-cyan-400/40 bg-cyan-400/10 text-xl text-cyan-300 pulse-ring">✦</div>
+              </div>
+
+              <!-- Orb -->
+              <div class="mx-auto grid h-48 w-48 place-items-center rounded-full border border-cyan-400/25 bg-cyan-400/6 hero-orb-ring">
+                <div class="grid h-32 w-32 place-items-center rounded-full border border-violet-400/30 bg-violet-400/10 text-5xl hero-orb-inner">◈</div>
+              </div>
+
+              <!-- Mini game list (skeleton → real) -->
+              <div id="hero-game-list" class="grid gap-2">
+                {[0,1,2].map(() => (
+                  <div class="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                    <div>
+                      <div class="skeleton h-3.5 w-32 rounded"></div>
+                      <div class="skeleton mt-1.5 h-2.5 w-20 rounded"></div>
+                    </div>
+                    <div class="skeleton h-7 w-10 rounded-lg"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- STATS STRIP                         -->
+    <!-- ═══════════════════════════════════ -->
+    <section class="mx-auto max-w-7xl px-6" data-reveal style="--reveal-delay:60ms">
+      <div class="flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-800/60 bg-slate-950/40 px-5 py-4">
+        {[
+          { icon: "🎮", value: totalGames,  label: "Games" },
+          { icon: "💾", value: romHacks,    label: "ROM Hacks" },
+          { icon: "🖥️", value: fanGames,    label: "Fan Games" },
+          { icon: "✅", value: complete,    label: "Complete" },
+          { icon: "🌍", value: newRegion,   label: "New Regions" },
+          { icon: "⭐", value: highRated,   label: "Rated 9.0+" },
+        ].map(({ icon, value, label }, i) => (
+          <>
+            {i > 0 && <div class="hidden h-4 w-px bg-slate-800 sm:block"></div>}
+            <div class="stat-card flex items-center gap-2 rounded-xl px-3 py-1.5 transition hover:bg-slate-900/60">
+              <span class="text-sm">{icon}</span>
+              <span class="text-sm font-black text-white" data-counter={value} data-counter-duration={600 + i * 80}>0</span>
+              <span class="text-xs text-slate-600">{label}</span>
+            </div>
+          </>
+        ))}
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TOP RATED + COLLECTIONS + HIDDEN GEMS       -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="mx-auto mt-10 max-w-7xl gap-6 px-6 lg:grid lg:grid-cols-[1fr_1fr_1fr]">
+
+      <!-- Top Rated -->
+      <div class="mb-6 rounded-[1.75rem] border border-slate-700/60 bg-slate-950/70 p-6 lg:mb-0" data-reveal style="--reveal-delay:0ms">
+        <p class="mb-1 text-xs font-black uppercase tracking-[0.3em] text-yellow-300">Top Rated</p>
+        <h2 class="mb-5 text-xl font-black text-white">Highest scored</h2>
+        <div class="grid gap-2">
+          {topRated.map((game, i) => (
+            <a
+              href={`/games/${game.id}`}
+              class={`group flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 p-3 transition hover:border-yellow-400/30 hover:bg-slate-900 ${i === 0 ? "sparkle-badge" : ""}`}
+            >
+              <span
+                class={`w-6 shrink-0 text-center text-xl font-black ${i === 0 ? "text-yellow-300" : "text-slate-700"}`}
+                style={i === 0 ? "text-shadow:0 0 20px rgba(253,224,71,0.5)" : ""}
+              >{i + 1}</span>
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-sm font-black text-white group-hover:text-yellow-100">{game.name}</div>
+                <div class="text-[11px] text-slate-600">{game.type} · {game.runtime}</div>
+              </div>
+              <div class="flex shrink-0 items-center gap-1 rounded-lg border border-yellow-400/25 bg-yellow-400/8 px-2 py-0.5">
+                <span class="text-xs font-black text-yellow-300">{game.rating}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+        <a href="/library" class="mt-4 block text-center text-xs font-black text-slate-600 transition hover:text-slate-400">
+          View Full Rankings →
+        </a>
+      </div>
+
+      <!-- Collections -->
+      <div class="mb-6 rounded-[1.75rem] border border-slate-700/60 bg-slate-950/70 p-6 lg:mb-0" data-reveal style="--reveal-delay:80ms">
+        <div class="mb-5 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-black uppercase tracking-[0.28em] text-cyan-300">Collections</p>
+            <h2 class="mt-1 text-xl font-black text-white">By experience</h2>
+          </div>
+          <a href="/collections" class="text-xs font-black text-cyan-300 transition hover:text-cyan-200">View all</a>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          {collections.map((col) => (
+            <a
+              href={col.href}
+              class="group overflow-hidden rounded-2xl border border-slate-700/60 transition hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <!-- Mini cover -->
+              <div class="relative flex h-16 items-center justify-center overflow-hidden" style={`background:linear-gradient(135deg,${col.from},${col.to})`}>
+                <span class="text-4xl opacity-20 select-none">{col.icon}</span>
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-[rgba(7,9,20,0.85)]"></div>
+              </div>
+              <div class="bg-[#0d1117] p-3">
+                <div class="text-xs font-black text-white truncate">{col.title}</div>
+                <div class="mt-0.5 text-[10px] text-slate-600">{col.count} entries</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <!-- Hidden gems -->
+      <div class="mb-6 rounded-[1.75rem] border border-slate-700/60 bg-slate-950/70 p-6 lg:mb-0" data-reveal style="--reveal-delay:160ms">
+        <div class="mb-5 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-black uppercase tracking-[0.28em] text-emerald-300">Hidden Gems</p>
+            <h2 class="mt-1 text-xl font-black text-white">Worth finding</h2>
+          </div>
+          <a href="/library?category=Hidden%20Gem" class="text-xs font-black text-cyan-300 transition hover:text-cyan-200">View all</a>
+        </div>
+        <div id="gems-skeleton" class="grid gap-2.5">
+          {[0,1,2].map((i) => (
+            <div class="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 p-3.5">
+              <div>
+                <div class={`skeleton h-4 rounded ${i === 0 ? "w-36" : i === 1 ? "w-28" : "w-32"}`}></div>
+                <div class="skeleton mt-2 h-3 w-20 rounded"></div>
+              </div>
+              <div class="skeleton h-7 w-10 rounded-lg"></div>
+            </div>
+          ))}
+        </div>
+        <div id="gems-real" class="hidden grid gap-2.5">
+          {hiddenGems.map((game, i) => (
+            <a
+              href={`/games/${game.id}`}
+              class={`group flex items-center justify-between rounded-xl border p-3.5 transition hover:bg-slate-900 ${
+                i === 0
+                  ? "sparkle-badge border-emerald-400/30 bg-emerald-400/5 hover:border-emerald-400/50"
+                  : "border-slate-700/60 bg-slate-900/60 hover:border-emerald-400/20"
+              }`}
+            >
+              <div class="min-w-0">
+                <div class="flex min-w-0 items-center gap-2">
+                  <span class="truncate font-black text-white text-sm">{game.name}</span>
+                  {i === 0 && <span class="shrink-0 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-black text-emerald-300">⭐ Top</span>}
+                </div>
+                <div class="mt-0.5 text-[11px] text-slate-600">{game.runtime} · {game.type}</div>
+              </div>
+              <div class="ml-3 shrink-0 rounded-lg border border-yellow-400/25 bg-yellow-400/8 px-2.5 py-1 text-sm font-black text-yellow-300">
+                {game.rating}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════ -->
+    <!-- FEATURED GAMES         -->
+    <!-- ══════════════════════ -->
+    <section class="mx-auto mt-10 max-w-7xl px-6">
+      <div class="mb-6 flex items-end justify-between gap-4" data-reveal>
+        <div>
+          <p class="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">Featured</p>
+          <h2 class="mt-1.5 text-2xl font-black text-white">Start here</h2>
+        </div>
+        <a href="/library" class="text-sm font-black text-cyan-300 transition hover:text-cyan-200">View all →</a>
+      </div>
+
+      <!-- Skeleton -->
+      <div id="featured-skeleton" class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        {[0,1,2,3].map(() => (
+          <div class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
+            <div class="skeleton h-28 w-full rounded-none"></div>
+            <div class="p-4 pt-7">
+              <div class="skeleton h-4 w-4/5 rounded"></div>
+              <div class="skeleton mt-2 h-3 w-1/2 rounded"></div>
+              <div class="mt-4 grid grid-cols-3 gap-2">
+                {[0,1,2].map(() => <div class="skeleton h-8 rounded-lg"></div>)}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <!-- Real grid -->
+      <div id="featured-real" class="hidden grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        {featured.map((game) => <GameCard game={game} />)}
+      </div>
+    </section>
+
+    <div class="h-20"></div>
+  </main>
+</BaseLayout>
+
+<style>
+  @keyframes skeleton-pulse {
+    0%,100% { opacity:0.5; }
+    50%     { opacity:1; }
+  }
+  .skeleton { background:rgb(30 41 59/0.9); animation:skeleton-pulse 1.6s ease-in-out infinite; border-radius:0.4rem; }
+</style>
+
+<script>
+  function initHomePage() {
+    // ── Welcome modal ────────────────────────────────────────
+    const STORAGE_KEY = "archivedex_welcomed_v1";
+    const overlay   = document.getElementById("welcome-overlay") as HTMLElement;
+    const openBtn   = document.getElementById("open-guide");
+    if (!overlay) return;
+
+    function showOverlay()  { overlay.style.display = "flex"; document.body.style.overflow = "hidden"; }
+    function hideOverlay()  { overlay.style.display = "none"; document.body.style.overflow = ""; localStorage.setItem(STORAGE_KEY, "1"); }
+
+    if (!localStorage.getItem(STORAGE_KEY)) showOverlay();
+    [document.getElementById("welcome-close"), document.getElementById("welcome-close-x")].forEach(b => b?.addEventListener("click", hideOverlay));
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) hideOverlay(); });
+    openBtn?.addEventListener("click", showOverlay);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && overlay.style.display !== "none") hideOverlay(); });
+
+    // ── Cursor spotlight ─────────────────────────────────────
+    const heroPanel = document.querySelector<HTMLElement>(".spotlight-active");
+    heroPanel?.addEventListener("mousemove", (e) => {
+      const rect = heroPanel.getBoundingClientRect();
+      heroPanel.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+      heroPanel.style.setProperty("--my", `${e.clientY - rect.top}px`);
+    }, { passive: true });
+
+    // ── Skeleton swap ────────────────────────────────────────
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.getElementById("featured-skeleton")?.classList.add("hidden");
+        const fr = document.getElementById("featured-real");
+        if (fr) { fr.classList.remove("hidden"); fr.classList.add("grid"); }
+
+        const heroList = document.getElementById("hero-game-list");
+        if (heroList) {
+          const entries: { id:string;name:string;type:string;category:string;rating:number }[] = (window as any).__ARCHIVEDEX_FEATURED__ ?? [];
+          if (entries.length) {
+            heroList.innerHTML = entries.slice(0, 3).map((g, i) => `
+              <a href="/games/${g.id}" class="card-animate flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-900/60 p-3 transition hover:border-cyan-400/40 hover:bg-slate-900" style="animation-delay:${i * 80}ms">
+                <div>
+                  <div class="text-sm font-black text-white">${g.name}</div>
+                  <div class="text-[11px] text-slate-500">${g.type} · ${g.category}</div>
+                </div>
+                <div class="rounded-lg border border-yellow-400/25 bg-yellow-400/8 px-2.5 py-0.5 text-sm font-black text-yellow-300">${g.rating}</div>
+              </a>
+            `).join("");
+          }
+        }
+
+        document.getElementById("gems-skeleton")?.classList.add("hidden");
+        const gemsReal = document.getElementById("gems-real");
+        if (gemsReal) { gemsReal.classList.remove("hidden"); gemsReal.classList.add("grid"); }
+      }, 120);
+    });
+
+    // ── Lucky modal ────────────────────────────────────────────
+    interface LuckyGame { id:string;name:string;type:string;runtime:string;category:string;rating:number;description:string;mood:string[];tags:string[];dex:string; }
+
+    // Fetched from the shared data endpoint (see src/pages/data/games.json.ts)
+    // instead of being embedded in this page's HTML — this was previously a
+    // ~350KB inline <script> block duplicated on every homepage load.
+    // Kicked off as soon as the Lucky modal opens (showLucky), which gives
+    // it a few seconds' head start before it's actually needed in
+    // showLuckyResult, so in practice there's no visible wait.
+    let luckyDataPromise: Promise<LuckyGame[]> | null = null;
+    function getLuckyData(): Promise<LuckyGame[]> {
+      if (!luckyDataPromise) {
+        luckyDataPromise = fetch("/data/games.json").then(r => r.json()).catch(() => []);
+      }
+      return luckyDataPromise;
+    }
+
+    const QUESTIONS = [
+      { id:"vibe",     text:"What kind of session are you in the mood for?",    options:[{label:"🗺️ Deep story journey",value:"story"},{label:"⚔️ Pure challenge",value:"hard"},{label:"🌿 Chill exploration",value:"chill"},{label:"🎲 Quick replayable run",value:"roguelike"}] },
+      { id:"platform", text:"What are you playing on?",                          options:[{label:"🎮 GBA / GBC emulator",value:"gba"},{label:"💻 PC / desktop",value:"pc"},{label:"↔️ Either works",value:"any"}] },
+      { id:"dex",      text:"How do you feel about non-official Pokémon?",       options:[{label:"✨ Love Fakemon",value:"fakemon"},{label:"🔵 Official only please",value:"official"},{label:"🤷 Don't care",value:"any"}] },
+    ];
+
+    const luckyOverlay   = document.getElementById("lucky-overlay") as HTMLElement;
+    if (!luckyOverlay) return;
+    const luckyCloseX    = document.getElementById("lucky-close-x")!;
+    const luckyProgress  = document.getElementById("lucky-progress") as HTMLElement;
+    const luckyStepLabel = document.getElementById("lucky-step-label")!;
+    const luckyQText     = document.getElementById("lucky-question-text")!;
+    const luckyOptions   = document.getElementById("lucky-options")!;
+    const luckyQArea     = document.getElementById("lucky-question-area")!;
+    const luckyResultArea= document.getElementById("lucky-result-area")!;
+    const luckyResultLink= document.getElementById("lucky-result-link") as HTMLAnchorElement;
+    const luckyResultName= document.getElementById("lucky-result-name")!;
+    const luckyResultMeta= document.getElementById("lucky-result-meta")!;
+    const luckyResultDesc= document.getElementById("lucky-result-desc")!;
+    const luckyResultRating=document.getElementById("lucky-result-rating")!;
+    const luckyRetry     = document.getElementById("lucky-retry")!;
+    const luckyGo        = document.getElementById("lucky-go") as HTMLAnchorElement;
+    const luckyBack      = document.getElementById("lucky-back")!;
+
+    let luckyStep = 0;
+    const answers: Record<string,string> = {};
+
+    function showLucky() { luckyStep=0; Object.keys(answers).forEach(k=>delete answers[k]); luckyQArea.classList.remove("hidden"); luckyResultArea.classList.add("hidden"); luckyBack.classList.add("hidden"); luckyOverlay.style.display="flex"; document.body.style.overflow="hidden"; getLuckyData(); renderLuckyStep(); }
+    function hideLucky() { luckyOverlay.style.display="none"; document.body.style.overflow=""; }
+
+    function renderLuckyStep() {
+      const q = QUESTIONS[luckyStep];
+      luckyStepLabel.textContent = `Step ${luckyStep+1} of ${QUESTIONS.length}`;
+      luckyQText.textContent = q.text;
+      luckyProgress.style.width = `${(luckyStep/QUESTIONS.length)*100}%`;
+      luckyBack.classList.toggle("hidden", luckyStep===0);
+      luckyOptions.innerHTML = q.options.map(opt=>`<button data-value="${opt.value}" class="lucky-opt w-full rounded-2xl border border-slate-700 bg-slate-900/80 px-5 py-3.5 text-left text-sm font-black text-slate-200 transition hover:border-violet-400/60 hover:bg-violet-400/10 hover:text-violet-200">${opt.label}</button>`).join("");
+      luckyOptions.querySelectorAll<HTMLButtonElement>(".lucky-opt").forEach(btn=>{
+        btn.addEventListener("click",()=>{ answers[QUESTIONS[luckyStep].id]=btn.dataset.value!; if(luckyStep<QUESTIONS.length-1){luckyStep++;renderLuckyStep();}else{showLuckyResult();} });
+      });
+    }
+
+    function scoreLuckyGame(g:LuckyGame):number {
+      let s=g.rating; const vibe=answers["vibe"],platform=answers["platform"],dex=answers["dex"];
+      if(vibe==="story"    &&(g.category==="Story Focused"||g.mood.includes("Story Heavy")||g.tags.includes("Story Heavy"))) s+=3;
+      if(vibe==="hard"     &&(g.category==="Difficulty"||g.mood.includes("Hardcore")||g.tags.includes("Difficulty"))) s+=3;
+      if(vibe==="chill"    &&(g.mood.includes("Cozy")||g.mood.includes("Relaxed")||g.category==="Open World")) s+=3;
+      if(vibe==="roguelike"&&(g.category==="Roguelike"||g.mood.includes("Replayable"))) s+=3;
+      if(platform==="gba"  &&["GBA","GBC","GB"].includes(g.runtime)) s+=2;
+      if(platform==="pc"   &&g.runtime==="PC") s+=2;
+      if(dex==="fakemon"   &&(g.dex.includes("Fakemon")||g.dex.includes("Fusion"))) s+=2;
+      if(dex==="official"  &&!g.dex.includes("Fakemon")&&!g.dex.includes("Fusion")) s+=2;
+      return s;
+    }
+
+    async function showLuckyResult() {
+      const allGames = await getLuckyData();
+      if(!allGames.length) { (window as any).showToast?.("Couldn't load game data — try again", "info"); hideLucky(); return; }
+      const scored=allGames.map(g=>({g,s:scoreLuckyGame(g)})).sort((a,b)=>b.s-a.s);
+      const topN=scored.slice(0,3);
+      const pick=topN[Math.floor(Math.random()*topN.length)].g;
+      luckyProgress.style.width="100%";
+      luckyQArea.classList.add("hidden"); luckyBack.classList.add("hidden"); luckyResultArea.classList.remove("hidden");
+      luckyResultName.textContent=pick.name; luckyResultMeta.textContent=`${pick.type} · ${pick.runtime} · ${pick.category}`; luckyResultDesc.textContent=pick.description; luckyResultRating.textContent=String(pick.rating); luckyResultLink.href=`/games/${pick.id}`; luckyGo.href=`/games/${pick.id}`;
+    }
+
+    [document.getElementById("open-lucky"),document.getElementById("open-lucky-link")].forEach(b=>b?.addEventListener("click",showLucky));
+    luckyCloseX.addEventListener("click",hideLucky);
+    luckyOverlay.addEventListener("click",(e)=>{if(e.target===luckyOverlay)hideLucky();});
+    luckyRetry.addEventListener("click",showLucky);
+    luckyBack.addEventListener("click",()=>{if(luckyStep>0){luckyStep--;renderLuckyStep();}});
+    document.addEventListener("keydown",(e)=>{if(e.key==="Escape"&&luckyOverlay.style.display!=="none")hideLucky();});
+  } // end initHomePage
+
+  document.addEventListener("astro:page-load", initHomePage);
+</script>
+
+<script is:inline define:vars={{ featuredJSON: JSON.stringify(featured.map(g=>({id:g.id,name:g.name,type:g.type,category:g.category,rating:g.rating}))) }}>
+  window.__ARCHIVEDEX_FEATURED__ = JSON.parse(featuredJSON);
+</script>

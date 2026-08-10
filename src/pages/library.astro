@@ -1,0 +1,655 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import GameCard from "../components/GameCard.astro";
+import { games, categories, types, runtimes, statuses } from "../data/games";
+
+// How many cards are rendered server-side (and how many get added per
+// "Load more"). Kept as a single constant because the client script reads
+// the same number as its page size, so SSR output and client pagination
+// line up seamlessly.
+const PAGE_SIZE = 48;
+
+// Tags are far noisier than moods: 1,052 distinct tags across 642 games,
+// and ~800 of those are used by exactly one game. Rendering all of them as
+// cloud buttons is an unusable wall of one-off labels, so only tags that
+// clear a minimum usage count make the cut. Moods don't need this (33
+// total, already a curated vocabulary) so they stay unfiltered.
+const MIN_TAG_COUNT = 4;
+const tagCounts = new Map<string, number>();
+for (const g of games) {
+  for (const tag of g.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+}
+const allTags  = [...tagCounts.keys()].filter((t) => (tagCounts.get(t) ?? 0) >= MIN_TAG_COUNT).sort();
+const allMoods = [...new Set(games.flatMap(g => g.mood))].sort();
+
+// Default sort is "rating-desc" (see #sort below) — pre-sorting here means
+// the server-rendered first page and the client's in-memory list start out
+// identical, so there's no flash/reflow once JS takes over.
+const initialGames = [...games].sort((a, b) => b.rating - a.rating).slice(0, PAGE_SIZE);
+---
+
+<BaseLayout title="Library · ArchiveDex">
+  <main class="mx-auto max-w-7xl px-6 py-10">
+
+    <!-- Header -->
+    <header class="mb-7 flex flex-wrap items-end justify-between gap-4" data-reveal>
+      <div>
+        <p class="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">ArchiveDex Library</p>
+        <h1 class="mt-2 text-5xl font-black text-white">Search the archive</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-sm font-black text-cyan-300">
+          <span id="result-count" class="inline-block">{games.length}</span> games
+        </span>
+        <button id="reset" class="magnetic-btn rounded-full border border-slate-700 bg-slate-900/80 px-4 py-1.5 text-sm font-black text-slate-500 transition hover:border-slate-600 hover:text-slate-300">
+          Reset all
+        </button>
+      </div>
+    </header>
+
+    <!-- Active filter pill strip -->
+    <div id="active-pills-row" class="mb-4 hidden flex-wrap items-center gap-2">
+      <span class="text-xs font-black uppercase tracking-widest text-slate-600">Active:</span>
+      <div id="active-pills" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- Filter panel -->
+    <section class="glass-panel mb-5 rounded-3xl p-5" data-reveal style="--reveal-delay:60ms">
+      <div class="grid gap-3 lg:grid-cols-5">
+        <div class="relative lg:col-span-2">
+          <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">🔍</span>
+          <input
+            id="search"
+            placeholder="Search name, tags, engine, mood…"
+            class="w-full rounded-2xl border border-slate-700 bg-slate-950 py-3 pl-10 pr-4 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.12)]"
+          />
+        </div>
+        <div class="select-wrap">
+          <select id="type" class="pill-select w-full rounded-2xl border border-slate-700 bg-slate-950 py-3 pl-4 pr-8 text-slate-100 outline-none transition focus:border-cyan-400 appearance-none">
+            <option value="">All types</option>
+            {types.map(t => <option value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div class="select-wrap">
+          <select id="category" class="pill-select w-full rounded-2xl border border-slate-700 bg-slate-950 py-3 pl-4 pr-8 text-slate-100 outline-none transition focus:border-cyan-400 appearance-none">
+            <option value="">All categories</option>
+            {categories.map(c => <option value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div class="select-wrap">
+          <select id="runtime" class="pill-select w-full rounded-2xl border border-slate-700 bg-slate-950 py-3 pl-4 pr-8 text-slate-100 outline-none transition focus:border-cyan-400 appearance-none">
+            <option value="">All runtimes</option>
+            {runtimes.map(r => <option value={r}>{r}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+        <div class="select-wrap">
+          <select id="status" class="pill-select rounded-2xl border border-slate-700 bg-slate-950 py-3 pl-4 pr-8 text-slate-100 outline-none transition focus:border-cyan-400 appearance-none">
+            <option value="">All statuses</option>
+            {statuses.map(s => <option value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div class="select-wrap">
+          <select id="sort" class="pill-select rounded-2xl border border-slate-700 bg-slate-950 py-3 pl-4 pr-8 text-slate-100 outline-none transition focus:border-cyan-400 appearance-none">
+            <option value="rating-desc">Rating: High → Low</option>
+            <option value="rating-asc">Rating: Low → High</option>
+            <option value="name-asc">Name: A → Z</option>
+            <option value="name-desc">Name: Z → A</option>
+          </select>
+        </div>
+        <p class="ml-auto text-[11px] text-slate-600">
+          Press <kbd class="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 font-mono text-slate-500">/</kbd> to focus search
+        </p>
+      </div>
+    </section>
+
+    <!-- Tag / Mood cloud -->
+    <section class="mb-6 rounded-3xl border border-slate-700/60 bg-slate-950/50 p-5" data-reveal style="--reveal-delay:120ms">
+      <div class="mb-4 flex items-center gap-3">
+        <p class="text-xs font-black uppercase tracking-[0.25em] text-slate-500">Browse by</p>
+        <div class="flex gap-1 rounded-xl border border-slate-800 bg-slate-950 p-1">
+          <button id="tab-tags"  class="tab-btn active-tab rounded-lg px-3 py-1.5 text-xs font-black transition">Tags</button>
+          <button id="tab-moods" class="tab-btn rounded-lg px-3 py-1.5 text-xs font-black transition">Mood</button>
+        </div>
+      </div>
+      <div id="panel-tags" class="flex flex-wrap gap-2">
+        {allTags.map(tag => (
+          <button data-filter-tag={tag} class="cloud-tag-btn rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-xs font-bold text-slate-400 transition hover:border-cyan-400/50 hover:bg-slate-800 hover:text-cyan-300">
+            {tag}
+          </button>
+        ))}
+      </div>
+      <div id="panel-moods" class="hidden flex-wrap gap-2">
+        {allMoods.map(mood => (
+          <button data-filter-mood={mood} class="cloud-mood-btn rounded-full border border-violet-400/20 bg-violet-400/5 px-3 py-1.5 text-xs font-bold text-slate-400 transition hover:border-violet-400/50 hover:bg-violet-400/10 hover:text-violet-300">
+            {mood}
+          </button>
+        ))}
+      </div>
+    </section>
+
+    <!--
+      Game grid — server-renders only the first PAGE_SIZE cards (sorted the
+      same way the client defaults to). Everything beyond that is fetched
+      from /data/games.json and rendered client-side as the person scrolls
+      or changes filters. See the script below for how the two stay in sync.
+    -->
+    <section id="game-grid" class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {initialGames.map((game) => (
+        <div class="game-item relative" data-id={game.id}>
+          <GameCard game={game} />
+          <button
+            class="compare-toggle absolute right-3 top-3 z-10 grid h-7 w-7 place-items-center rounded-full border border-slate-700 bg-slate-950/90 text-sm text-slate-500 opacity-0 transition hover:border-cyan-400/60 hover:text-cyan-300"
+            data-cid={game.id}
+            data-cname={game.name}
+            title="Add to compare"
+          >⊕</button>
+        </div>
+      ))}
+    </section>
+
+    <!-- Load more -->
+    <div class="mt-8 flex justify-center">
+      <button id="load-more" class="magnetic-btn hidden rounded-2xl border border-slate-700 bg-slate-900/80 px-6 py-3 text-sm font-black text-slate-300 transition hover:border-cyan-400/50 hover:text-cyan-300">
+        Load more games
+      </button>
+    </div>
+    <div id="load-more-sentinel" class="h-1 w-full"></div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="mt-8 hidden rounded-3xl border border-slate-700/60 bg-slate-950/70 p-16 text-center">
+      <div class="mb-4 text-6xl opacity-20 select-none">◈</div>
+      <p class="text-2xl font-black text-white">No games match your filters</p>
+      <p class="mt-2 text-slate-500">Try broadening your search or clearing some filters.</p>
+      <button id="reset2" class="mt-6 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-8 py-3 text-sm font-black text-cyan-300 transition hover:bg-cyan-400/15">
+        Clear all filters
+      </button>
+    </div>
+  </main>
+
+  <!-- Back to top -->
+  <button id="back-to-top" aria-label="Back to top" class="fixed bottom-24 right-6 z-40 hidden h-11 w-11 place-items-center rounded-2xl border border-slate-700 bg-slate-900/95 text-slate-400 shadow-xl transition hover:border-cyan-400/50 hover:text-cyan-300">↑</button>
+
+  <!-- Compare bar -->
+  <div id="compare-bar" class="fixed bottom-0 left-0 right-0 z-50 hidden border-t border-slate-700 bg-slate-950/95 px-6 py-4 backdrop-blur-xl">
+    <div class="mx-auto flex max-w-7xl items-center gap-4">
+      <div class="flex flex-1 flex-wrap items-center gap-3">
+        <span class="text-sm font-black text-slate-400">Comparing:</span>
+        <div id="compare-chips" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div class="flex shrink-0 gap-3">
+        <button id="compare-clear" class="rounded-2xl border border-slate-700 px-4 py-2 text-sm font-black text-slate-400 transition hover:border-slate-600 hover:text-slate-200">Clear</button>
+        <a id="compare-go" href="/compare" class="rounded-2xl bg-cyan-300 px-5 py-2 text-sm font-black text-slate-950 transition hover:bg-cyan-200">Compare →</a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .active-tab { background:rgba(34,211,238,0.15); color:rgb(103 232 249); }
+  .tab-btn:not(.active-tab) { color:rgb(100 116 139); }
+  .game-item:hover .compare-toggle { opacity:1; }
+  .compare-toggle.selected { opacity:1; border-color:rgba(34,211,238,0.7); background:rgba(34,211,238,0.15); color:rgb(103 232 249); }
+  .select-wrap { position:relative; display:inline-block; }
+  .select-wrap::after { content:"⌄"; position:absolute; right:0.85rem; top:50%; transform:translateY(-58%); font-size:0.75rem; color:#64748b; pointer-events:none; font-weight:900; }
+
+  @keyframes count-pop { 0% { transform: scale(1); } 35% { transform: scale(1.22); } 100% { transform: scale(1); } }
+  .count-pop { animation: count-pop 0.36s cubic-bezier(0.34,1.56,0.64,1); }
+  @media (prefers-reduced-motion: reduce) {
+    .count-pop { animation: none; }
+  }
+</style>
+
+<script>
+  type LibGame = {
+    id: string; name: string; type: string; base: string; runtime: string;
+    status: string; category: string; rating: number; length: string;
+    difficulty: string; grind: string; story: string; dex: string;
+    sourceStatus: string; tags: string[]; mood: string[]; description: string;
+    creator: string; __search?: string;
+  };
+
+  const PAGE_SIZE = 48; // must match the Astro frontmatter constant above
+
+  function initLibraryPage() {
+    const searchEl   = document.querySelector<HTMLInputElement>("#search")!;
+    const typeEl     = document.querySelector<HTMLSelectElement>("#type")!;
+    const categoryEl = document.querySelector<HTMLSelectElement>("#category")!;
+    const runtimeEl  = document.querySelector<HTMLSelectElement>("#runtime")!;
+    const statusEl   = document.querySelector<HTMLSelectElement>("#status")!;
+    const sortEl     = document.querySelector<HTMLSelectElement>("#sort")!;
+    const countEl    = document.querySelector<HTMLElement>("#result-count")!;
+    const emptyEl    = document.querySelector<HTMLElement>("#empty-state")!;
+    const gridEl     = document.querySelector<HTMLElement>("#game-grid")!;
+    if (!searchEl || !gridEl) return; // not on library page
+
+    const initialItems = Array.from(gridEl.querySelectorAll<HTMLElement>(".game-item"));
+
+    const pillsRow   = document.querySelector<HTMLElement>("#active-pills-row")!;
+    const pillsEl    = document.querySelector<HTMLElement>("#active-pills")!;
+
+    const tabTags    = document.querySelector<HTMLButtonElement>("#tab-tags")!;
+    const tabMoods   = document.querySelector<HTMLButtonElement>("#tab-moods")!;
+    const panelTags  = document.querySelector<HTMLElement>("#panel-tags")!;
+    const panelMoods = document.querySelector<HTMLElement>("#panel-moods")!;
+    const backToTop  = document.querySelector<HTMLButtonElement>("#back-to-top")!;
+    const compareBar = document.querySelector<HTMLElement>("#compare-bar")!;
+    const compareChips = document.querySelector<HTMLElement>("#compare-chips")!;
+    const compareClear = document.querySelector<HTMLButtonElement>("#compare-clear")!;
+    const compareGo  = document.querySelector<HTMLAnchorElement>("#compare-go")!;
+    const loadMoreBtn = document.querySelector<HTMLButtonElement>("#load-more")!;
+    const loadMoreSentinel = document.querySelector<HTMLElement>("#load-more-sentinel")!;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const toast = (window as any).showToast as ((msg: string, type?: "success"|"info"|"remove") => void) | undefined;
+
+    let activeTag  = "";
+    let activeMood = "";
+    let compareSet: Map<string, string> = new Map();
+    let firstRender = true;
+
+    // Full dataset, fetched once from the shared JSON endpoint (see
+    // src/pages/data/games.json.ts). Filtering/sorting happens against this
+    // in-memory array — not by querying 600+ DOM nodes — which is what
+    // keeps typing in the search box fast at this dataset size.
+    let allGames: LibGame[] = [];
+    let filteredSorted: LibGame[] = [];
+    let renderedCount = 0;
+    // Stays true until either the URL requested a non-default filter on
+    // load, or the person changes something. While true, the grid keeps
+    // showing the server-rendered cards as-is (so the entrance animation
+    // and card-morph page transition work on first paint); once broken,
+    // the grid is fully owned by client-side rendering.
+    let pristine = true;
+
+    // ── Escaping (dataset is trusted, but apostrophes/quotes in names and
+    // descriptions would otherwise break the generated HTML/attributes) ──
+    function esc(str: unknown): string {
+      return String(str).replace(/[&<>"']/g, (c) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string
+      ));
+    }
+
+    // ── Design-token helpers — MUST stay in sync with GameCard.astro and
+    // the .cat-grad-* / .status-dot-* classes in global.css. ──
+    function catSlug(category: string): string {
+      return category.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    }
+    const catIcon: Record<string, string> = {
+      "Essential Collection": "✦", "Must Play": "◆", "Story Focused": "◈",
+      "Open World": "⬡", "Roguelike": "✧", "Difficulty": "⚔", "Fakemon": "★",
+      "Competitive": "⊞", "Anime Inspired": "◐", "Historical Classic": "◉",
+      "Hidden Gem": "💎", "Experimental": "⟁", "Collector Only": "▣", "PMD Inspired": "🗝",
+    };
+    const statusDotClass: Record<string, string> = {
+      Complete: "status-dot-complete", WIP: "status-dot-wip",
+      Demo: "status-dot-demo", Historical: "status-dot-historical",
+    };
+    function shortLength(v: string) { return v.replace("Run-Based", "Runs"); }
+    function shortDifficulty(v: string) {
+      return v.replace("Hard Mode Available", "Hard+").replace("Normal Default", "Normal").replace("Hard Default", "Hard");
+    }
+    function shortStory(v: string) {
+      return v.replace("Very Story Heavy", "V. Heavy").replace("Story Heavy", "Heavy")
+        .replace("Good Story", "Good").replace("Standard Story", "Standard").replace("Minimal Story", "Minimal");
+    }
+
+    // Client-side equivalent of GameCard.astro. Kept deliberately close to
+    // the markup that component renders so cards look identical whether
+    // they came from the server or were added here. It intentionally does
+    // NOT set transition:name-style scoping — Astro's shared-element morph
+    // only applies to elements it compiles at build time, so cards added
+    // this way get a plain appearance instead of a morph when clicked into
+    // — a fair trade for not shipping per-card view-transition CSS for
+    // every one of 600+ games (see docs/PERFORMANCE.md for the numbers).
+    function cardHTML(game: LibGame): string {
+      const gradClass = `cat-grad-${catSlug(game.category)}`;
+      const icon = catIcon[game.category] ?? "◆";
+      const dotClass = statusDotClass[game.status] ?? "status-dot-historical";
+      const selected = compareSet.has(game.id);
+      const tagsHTML = game.tags.slice(0, 4).map((tag) => `
+        <button data-tag="${esc(tag)}" class="tag-chip shrink-0 rounded-full border border-cyan-400/20 bg-cyan-400/5 px-2 py-0.5 text-[10px] font-bold text-cyan-400/70 transition hover:border-cyan-400/50 hover:text-cyan-300">${esc(tag)}</button>
+      `).join("");
+
+      return `
+        <div class="game-item relative" data-id="${esc(game.id)}">
+          <a href="/games/${esc(game.id)}" class="tilt-card group relative flex flex-col h-full overflow-hidden rounded-2xl border border-slate-700/60 bg-[#0d1117] transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/40 hover:shadow-[0_0_0_1px_rgba(103,232,249,0.18),0_20px_60px_rgba(0,0,0,0.45)]">
+            <div class="tilt-glare"></div>
+            <div class="cover-card h-28 w-full shrink-0 ${gradClass}">
+              <div class="card-noise absolute inset-0 opacity-[0.18]"></div>
+              <div class="absolute inset-0 flex items-center justify-center text-8xl leading-none opacity-15 select-none" style="z-index:1">${icon}</div>
+              <div class="${dotClass} absolute top-3 left-3 h-2.5 w-2.5 rounded-full border border-white/20 z-[3]" title="${esc(game.status)}"></div>
+              <div class="absolute top-3 right-3 z-[3]">
+                <span class="rounded-full border border-white/20 bg-black/50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white/80 backdrop-blur-sm">${esc(game.runtime)}</span>
+              </div>
+              <div class="absolute bottom-[-14px] left-4 z-[4] flex items-center gap-1.5 rounded-full border border-yellow-300/40 bg-[#0d1117]/95 px-3 py-1 backdrop-blur-sm glow-yellow group-hover:border-yellow-300/60">
+                <span class="text-sm font-black text-yellow-300" style="text-shadow:0 0 12px rgba(253,224,71,0.6)">${game.rating}</span>
+                <span class="text-[9px] text-yellow-300/50">/ 10</span>
+              </div>
+            </div>
+            <div class="flex flex-col flex-1 pt-7 px-4 pb-4">
+              <h3 class="text-sm font-black leading-tight text-white clamp-2 group-hover:text-cyan-100 transition-colors">${esc(game.name)}</h3>
+              <p class="mt-1 text-[11px] text-slate-500">${esc(game.type)} · ${esc(game.base)}</p>
+              ${game.creator ? `<p class="mt-0.5 text-[11px] italic text-slate-600 truncate">${esc(game.creator)}</p>` : ""}
+              <p class="mt-2 text-[11px] leading-[1.55] text-slate-400 clamp-2 flex-1">${esc(game.description)}</p>
+              <div class="mt-3 grid grid-cols-3 gap-1 border-t border-slate-800/80 pt-3">
+                <div class="text-center"><div class="text-[9px] font-black uppercase tracking-widest text-slate-600">Length</div><div class="mt-0.5 text-[11px] font-bold text-slate-300 leading-tight">${esc(shortLength(game.length))}</div></div>
+                <div class="text-center"><div class="text-[9px] font-black uppercase tracking-widest text-slate-600">Difficulty</div><div class="mt-0.5 text-[11px] font-bold text-slate-300 leading-tight">${esc(shortDifficulty(game.difficulty))}</div></div>
+                <div class="text-center"><div class="text-[9px] font-black uppercase tracking-widest text-slate-600">Story</div><div class="mt-0.5 text-[11px] font-bold text-slate-300 leading-tight">${esc(shortStory(game.story))}</div></div>
+              </div>
+              ${tagsHTML ? `<div class="mt-3 flex items-center gap-1.5 overflow-hidden" style="mask-image:linear-gradient(to right,black 80%,transparent)">${tagsHTML}</div>` : ""}
+            </div>
+          </a>
+          <button
+            class="compare-toggle absolute right-3 top-3 z-10 grid h-7 w-7 place-items-center rounded-full border border-slate-700 bg-slate-950/90 text-sm text-slate-500 transition hover:border-cyan-400/60 hover:text-cyan-300 ${selected ? "selected" : "opacity-0"}"
+            data-cid="${esc(game.id)}"
+            data-cname="${esc(game.name)}"
+            title="${selected ? "Remove from compare" : "Add to compare"}"
+          >⊕</button>
+        </div>`;
+    }
+
+    function buildSearchBlob(g: LibGame): string {
+      return `${g.name} ${g.type} ${g.base} ${g.runtime} ${g.status} ${g.category} ${g.length} ${g.difficulty} ${g.grind} ${g.story} ${g.dex} ${g.sourceStatus} ${g.tags.join(" ")} ${g.mood.join(" ")}`.toLowerCase();
+    }
+
+    function computeFilteredSorted(): LibGame[] {
+      const query      = searchEl.value.toLowerCase().trim();
+      const selType    = typeEl.value;
+      const selCat     = categoryEl.value;
+      const selRuntime = runtimeEl.value;
+      const selStatus  = statusEl.value;
+      const sortBy     = sortEl.value;
+
+      const list = allGames.filter((g) =>
+        (!query      || g.__search!.includes(query)) &&
+        (!selType    || g.type     === selType) &&
+        (!selCat     || g.category === selCat) &&
+        (!selRuntime || g.runtime  === selRuntime) &&
+        (!selStatus  || g.status   === selStatus) &&
+        (!activeTag  || g.tags.includes(activeTag)) &&
+        (!activeMood || g.mood.includes(activeMood))
+      );
+
+      list.sort((a, b) => {
+        if (sortBy === "rating-desc") return b.rating - a.rating;
+        if (sortBy === "rating-asc")  return a.rating - b.rating;
+        if (sortBy === "name-asc")    return a.name.localeCompare(b.name);
+        if (sortBy === "name-desc")   return b.name.localeCompare(a.name);
+        return 0;
+      });
+      return list;
+    }
+
+    function isDefaultState(): boolean {
+      return !searchEl.value && !typeEl.value && !categoryEl.value && !runtimeEl.value &&
+        !statusEl.value && sortEl.value === "rating-desc" && !activeTag && !activeMood;
+    }
+
+    function updateLoadMore() {
+      const hasMore = renderedCount < filteredSorted.length;
+      loadMoreBtn.classList.toggle("hidden", !hasMore);
+      if (hasMore) loadMoreBtn.textContent = `Load more games (${filteredSorted.length - renderedCount} left)`;
+    }
+
+    function loadMore() {
+      const next = filteredSorted.slice(renderedCount, renderedCount + PAGE_SIZE);
+      if (!next.length) return;
+      gridEl.insertAdjacentHTML("beforeend", next.map(cardHTML).join(""));
+      renderedCount += next.length;
+      updateLoadMore();
+    }
+
+    function applyFilters() {
+      if (!allGames.length) return; // dataset not fetched yet
+
+      filteredSorted = computeFilteredSorted();
+      const total = filteredSorted.length;
+
+      if (pristine && isDefaultState()) {
+        // Nothing has changed from what the server already rendered —
+        // leave the DOM alone (keeps the entrance animation / page-morph
+        // transition on the initial cards intact).
+        renderedCount = Math.min(PAGE_SIZE, total);
+      } else {
+        pristine = false;
+        renderedCount = Math.min(PAGE_SIZE, total);
+        gridEl.innerHTML = filteredSorted.slice(0, renderedCount).map(cardHTML).join("");
+      }
+
+      updateLoadMore();
+
+      const visibleItems = pristine ? initialItems : Array.from(gridEl.querySelectorAll<HTMLElement>(".game-item"));
+      if (firstRender && !reduceMotion) {
+        visibleItems.forEach((item, i) => {
+          item.style.animation = i < 12 ? `card-rise 0.5s cubic-bezier(0.16,1,0.3,1) ${i * 45}ms both` : "none";
+        });
+      }
+      firstRender = false;
+
+      const prevCount = countEl.textContent;
+      countEl.textContent = String(total);
+      if (prevCount !== countEl.textContent && !reduceMotion) {
+        countEl.classList.remove("count-pop");
+        void countEl.offsetWidth;
+        countEl.classList.add("count-pop");
+      }
+      emptyEl.classList.toggle("hidden", total > 0);
+      updateActivePills();
+      updateCloudHighlights();
+    }
+
+    function updateActivePills() {
+      const pills: {label:string;clear:()=>void}[] = [];
+      if (searchEl.value)    pills.push({ label:`Search: "${searchEl.value}"`, clear:()=>{searchEl.value=""; applyFilters();} });
+      if (typeEl.value)      pills.push({ label:`Type: ${typeEl.value}`,       clear:()=>{typeEl.value=""; applyFilters();} });
+      if (categoryEl.value)  pills.push({ label:`Cat: ${categoryEl.value}`,    clear:()=>{categoryEl.value=""; applyFilters();} });
+      if (runtimeEl.value)   pills.push({ label:`Runtime: ${runtimeEl.value}`, clear:()=>{runtimeEl.value=""; applyFilters();} });
+      if (statusEl.value)    pills.push({ label:`Status: ${statusEl.value}`,   clear:()=>{statusEl.value=""; applyFilters();} });
+      if (activeTag)         pills.push({ label:`Tag: ${activeTag}`,           clear:()=>{activeTag=""; pushURL(); applyFilters();} });
+      if (activeMood)        pills.push({ label:`Mood: ${activeMood}`,         clear:()=>{activeMood=""; pushURL(); applyFilters();} });
+
+      if (pills.length === 0) {
+        pillsRow.classList.add("hidden"); pillsRow.classList.remove("flex");
+        return;
+      }
+      pillsRow.classList.remove("hidden"); pillsRow.classList.add("flex");
+      pillsEl.innerHTML = pills.map((p, i) => `
+        <button class="active-pill flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-300 transition hover:border-red-400/40 hover:bg-red-400/10 hover:text-red-300" data-pill-idx="${i}">
+          ${p.label} <span class="text-[10px]">✕</span>
+        </button>
+      `).join("");
+      pillsEl.querySelectorAll<HTMLButtonElement>(".active-pill").forEach(btn => {
+        const idx = parseInt(btn.dataset.pillIdx!);
+        btn.addEventListener("click", () => pills[idx].clear());
+      });
+    }
+
+    function updateCloudHighlights() {
+      document.querySelectorAll<HTMLButtonElement>(".cloud-tag-btn").forEach(btn => {
+        const on = btn.dataset.filterTag === activeTag && activeTag !== "";
+        btn.classList.toggle("border-cyan-400/70", on);
+        btn.classList.toggle("bg-cyan-400/15", on);
+        btn.classList.toggle("text-cyan-200", on);
+        btn.classList.toggle("border-slate-700", !on);
+        btn.classList.toggle("bg-slate-900/70", !on);
+        btn.classList.toggle("text-slate-400", !on);
+      });
+      document.querySelectorAll<HTMLButtonElement>(".cloud-mood-btn").forEach(btn => {
+        const on = btn.dataset.filterMood === activeMood && activeMood !== "";
+        btn.classList.toggle("border-violet-400/70", on);
+        btn.classList.toggle("bg-violet-400/15", on);
+        btn.classList.toggle("text-violet-200", on);
+        btn.classList.toggle("border-violet-400/20", !on);
+        btn.classList.toggle("bg-violet-400/5", !on);
+        btn.classList.toggle("text-slate-400", !on);
+      });
+    }
+
+    document.querySelectorAll<HTMLButtonElement>(".cloud-tag-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const tag = btn.dataset.filterTag ?? "";
+        activeTag  = activeTag === tag ? "" : tag;
+        activeMood = "";
+        pushURL(); applyFilters();
+      });
+    });
+    document.querySelectorAll<HTMLButtonElement>(".cloud-mood-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const mood = btn.dataset.filterMood ?? "";
+        activeMood = activeMood === mood ? "" : mood;
+        activeTag  = "";
+        pushURL(); applyFilters();
+      });
+    });
+
+    // Debounce only the free-text search (fires on every keystroke);
+    // dropdowns fire on "change", which is already a discrete, infrequent event.
+    function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+      let t: ReturnType<typeof setTimeout>;
+      return ((...args: any[]) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); }) as T;
+    }
+    searchEl.addEventListener("input", debounce(applyFilters, 140));
+    [typeEl, categoryEl, runtimeEl, statusEl, sortEl].forEach(el => el.addEventListener("change", applyFilters));
+
+    function doReset() {
+      searchEl.value=""; typeEl.value=""; categoryEl.value="";
+      runtimeEl.value=""; statusEl.value=""; sortEl.value="rating-desc";
+      activeTag=""; activeMood=""; pushURL(); applyFilters();
+      toast?.("Filters cleared", "info");
+    }
+    document.getElementById("reset")?.addEventListener("click", doReset);
+    document.getElementById("reset2")?.addEventListener("click", doReset);
+
+    tabTags.addEventListener("click", () => {
+      panelTags.classList.remove("hidden"); panelTags.classList.add("flex");
+      panelMoods.classList.add("hidden");  panelMoods.classList.remove("flex");
+      tabTags.classList.add("active-tab"); tabMoods.classList.remove("active-tab");
+    });
+    tabMoods.addEventListener("click", () => {
+      panelMoods.classList.remove("hidden"); panelMoods.classList.add("flex");
+      panelTags.classList.add("hidden");    panelTags.classList.remove("flex");
+      tabMoods.classList.add("active-tab"); tabTags.classList.remove("active-tab");
+    });
+
+    function pushURL() {
+      const url = new URL(window.location.href);
+      activeTag  ? url.searchParams.set("tag", activeTag)   : url.searchParams.delete("tag");
+      activeMood ? url.searchParams.set("mood", activeMood) : url.searchParams.delete("mood");
+      history.replaceState({}, "", url.toString());
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "/" && document.activeElement !== searchEl) {
+        e.preventDefault(); searchEl.focus(); searchEl.scrollIntoView({ behavior:"smooth", block:"center" });
+      }
+      if (e.key === "Escape" && document.activeElement === searchEl) searchEl.blur();
+    });
+
+    window.addEventListener("scroll", () => {
+      const show = window.scrollY > 500;
+      backToTop.classList.toggle("hidden", !show);
+      backToTop.classList.toggle("grid", show);
+    }, { passive:true });
+    backToTop.addEventListener("click", () => window.scrollTo({ top:0, behavior:"smooth" }));
+
+    function renderCompareBar() {
+      const count = compareSet.size;
+      compareBar.classList.toggle("hidden", count === 0);
+      compareChips.innerHTML = [...compareSet.entries()].map(([id,name]) => `
+        <div class="flex items-center gap-1.5 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 glow-cyan">
+          <span class="text-sm font-black text-cyan-200">${esc(name)}</span>
+          <button class="chip-remove text-slate-500 hover:text-red-400 transition font-black text-xs" data-rid="${esc(id)}">✕</button>
+        </div>
+      `).join("");
+      compareChips.querySelectorAll<HTMLButtonElement>(".chip-remove").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.rid!;
+          const name = compareSet.get(id);
+          compareSet.delete(id);
+          const toggle = gridEl.querySelector<HTMLButtonElement>(`.compare-toggle[data-cid="${id}"]`);
+          toggle?.classList.remove("selected");
+          toggle?.classList.add("opacity-0");
+          if (toggle) toggle.title = "Add to compare";
+          renderCompareBar();
+          if (name) toast?.(`Removed ${name}`, "remove");
+        });
+      });
+      if (count >= 2) { compareGo.href=`/compare?games=${[...compareSet.keys()].join(",")}`; compareGo.textContent=`Compare ${count} →`; }
+    }
+
+    function handleCompareToggle(btn: HTMLButtonElement) {
+      const id = btn.dataset.cid!; const name = btn.dataset.cname!;
+      if (compareSet.has(id)) {
+        compareSet.delete(id); btn.classList.remove("selected"); btn.classList.add("opacity-0"); btn.title="Add to compare";
+        toast?.(`Removed ${name}`, "remove");
+      } else if (compareSet.size < 3) {
+        compareSet.set(id,name); btn.classList.add("selected"); btn.classList.remove("opacity-0"); btn.title="Remove from compare";
+        toast?.(`Added ${name} to compare`, "success");
+      } else {
+        toast?.("Compare limit reached — max 3 games", "info");
+      }
+      renderCompareBar();
+    }
+
+    // Event delegation on the grid handles both server-rendered and
+    // client-rendered cards uniformly, including ones added later via
+    // "Load more" — a single listener instead of re-binding after every render.
+    gridEl.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+
+      const toggle = target.closest<HTMLButtonElement>(".compare-toggle");
+      if (toggle) {
+        e.preventDefault(); e.stopPropagation();
+        handleCompareToggle(toggle);
+        return;
+      }
+
+      // GameCard.astro's own script already binds tag-chips inside the
+      // server-rendered cards (data-bound="1"); this only needs to handle
+      // chips on cards that were rendered client-side.
+      const chip = target.closest<HTMLButtonElement>(".tag-chip");
+      if (chip && !chip.dataset.bound) {
+        e.preventDefault(); e.stopPropagation();
+        const tag = chip.dataset.tag;
+        if (tag) window.location.href = `/library?tag=${encodeURIComponent(tag)}`;
+      }
+    });
+
+    compareClear.addEventListener("click", () => {
+      compareSet.clear();
+      gridEl.querySelectorAll<HTMLButtonElement>(".compare-toggle").forEach(btn => {
+        btn.classList.remove("selected"); btn.classList.add("opacity-0"); btn.title="Add to compare";
+      });
+      renderCompareBar();
+    });
+
+    loadMoreBtn.addEventListener("click", loadMore);
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !loadMoreBtn.classList.contains("hidden")) loadMore();
+    }, { rootMargin: "600px" });
+    io.observe(loadMoreSentinel);
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("category")) categoryEl.value = params.get("category")!;
+    if (params.get("q"))        searchEl.value   = params.get("q")!;
+    if (params.get("tag"))  { activeTag  = params.get("tag")!;  tabTags.click(); }
+    if (params.get("mood")) { activeMood = params.get("mood")!; tabMoods.click(); }
+
+    fetch("/data/games.json")
+      .then((res) => res.json())
+      .then((data: LibGame[]) => {
+        allGames = data.map((g) => ({ ...g, __search: buildSearchBlob(g) }));
+        applyFilters();
+      })
+      .catch((err) => {
+        console.error("ArchiveDex: failed to load /data/games.json", err);
+        // Filtering/Load more stay inert; the server-rendered first page
+        // of cards remains visible as a static fallback.
+      });
+  }
+
+  document.addEventListener("astro:page-load", initLibraryPage);
+</script>
