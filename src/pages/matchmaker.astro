@@ -1,0 +1,597 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Matchmaker Quiz · ArchiveDex" description="Find your ideal Pokémon ROM hack or fan game with our curated 12-step matching algorithm.">
+  <main class="mx-auto max-w-4xl px-6 py-10">
+
+    <div class="mb-4">
+      <a href="/library" class="text-xs font-mono-spec font-bold text-cyan-400 hover:underline">← Back to Library</a>
+    </div>
+
+    <!-- Matchmaker Header -->
+    <header class="text-center mb-8" data-reveal>
+      <div class="inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/10 px-3.5 py-1 text-xs font-mono-spec font-black uppercase tracking-wider text-violet-300">
+        <span>🎯</span> Curated Recommendation Engine
+      </div>
+      <h1 class="mt-3 text-4xl sm:text-5xl font-black text-white">Project Matchmaker</h1>
+      <p class="mt-2 text-xs sm:text-sm text-slate-400 max-w-xl mx-auto font-mono-spec">
+        Answer calibrated questions about mechanics, story tone, and dealbreakers to find your perfect Pokémon fan project.
+      </p>
+
+      <!-- Mode Selector: Quick 5-Step vs Deep 12-Step -->
+      <div class="mt-6 inline-flex items-center gap-1 rounded-2xl border border-white/[0.1] bg-[#111520] p-1.5 font-mono-spec text-xs">
+        <button id="mode-quick-btn" class="quiz-mode-btn rounded-xl px-4 py-2 font-bold text-slate-400 transition hover:text-white">
+          ⚡ Quick 5-Step Mode
+        </button>
+        <button id="mode-deep-btn" class="quiz-mode-btn active-mode rounded-xl px-4 py-2 font-black transition">
+          🔬 Deep 12-Step Mode
+        </button>
+      </div>
+    </header>
+
+    <!-- Quiz Card Shell -->
+    <section class="glass-panel relative rounded-3xl p-6 sm:p-10 shadow-2xl overflow-hidden" data-reveal style="--reveal-delay:60ms">
+      
+      <!-- Progress Bar Strip -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between text-xs font-mono-spec text-slate-400 mb-2">
+          <span id="step-counter-label" class="font-bold text-cyan-300">Step 1 of 12</span>
+          <span id="step-pct-label" class="text-slate-500">8%</span>
+        </div>
+        <div class="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+          <div id="quiz-progress-bar" class="h-full rounded-full bg-gradient-to-r from-cyan-400 via-violet-400 to-amber-300 transition-all duration-300" style="width: 8.3%;"></div>
+        </div>
+      </div>
+
+      <!-- Question Content Area -->
+      <div id="quiz-question-area" class="space-y-6">
+        <div>
+          <span id="question-category" class="text-[10px] font-mono-spec font-black uppercase tracking-widest text-slate-500">
+            Platform & Hardware
+          </span>
+          <h2 id="question-title" class="mt-1 text-2xl font-black text-white">
+            What device or platform will you be playing on?
+          </h2>
+          <p id="question-sub" class="text-xs text-slate-400 mt-1">
+            Choose your primary emulation or hardware setup.
+          </p>
+        </div>
+
+        <!-- Options Container -->
+        <div id="quiz-options-container" class="grid gap-3 sm:grid-cols-2">
+          <!-- Dynamically populated options -->
+        </div>
+
+        <!-- Quiz Navigation Controls -->
+        <div class="flex items-center justify-between pt-6 border-t border-white/[0.08]">
+          <button id="quiz-back-btn" class="hidden text-xs font-mono-spec font-bold text-slate-500 hover:text-slate-300">
+            ← Previous Question
+          </button>
+          <div class="flex items-center gap-3 ml-auto">
+            <button id="quiz-surprise-btn" class="rounded-xl border border-white/[0.1] bg-[#111520] px-4 py-2 text-xs font-mono-spec font-bold text-slate-400 hover:border-amber-400/40 hover:text-amber-300">
+              🎲 Surprise Me (Skip)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- RESULT OUTPUT: CROWN MATCH & ALTERNATIVES   -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div id="quiz-results-area" class="hidden space-y-8">
+        <div class="text-center">
+          <span class="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-xs font-mono-spec font-black uppercase tracking-widest text-yellow-300">
+            ✦ Matching Evaluation Complete
+          </span>
+          <h2 class="mt-2 text-3xl font-black text-white">Your Archetype Matches</h2>
+          <p class="text-xs text-slate-400 font-mono-spec mt-1">Based on your mechanics, difficulty, and dealbreaker selections:</p>
+        </div>
+
+        <!-- #1 CROWN MATCH -->
+        <div id="crown-match-card" class="rounded-3xl border-2 border-yellow-400/40 bg-gradient-to-b from-yellow-500/[0.08] to-[#161B29] p-6 sm:p-8 shadow-[0_0_50px_rgba(253,224,71,0.15)] relative overflow-hidden">
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
+            <div class="flex items-center gap-2.5">
+              <span class="text-2xl">👑</span>
+              <div>
+                <span class="text-[10px] font-mono-spec font-black uppercase tracking-wider text-yellow-300">#1 Definitive Crown Match</span>
+                <h3 id="crown-name" class="text-2xl font-black text-white">Pokémon Unbound</h3>
+              </div>
+            </div>
+            <!-- Match percentage pill -->
+            <div class="rounded-2xl border border-yellow-400/40 bg-yellow-400/20 px-4 py-1.5 text-center">
+              <span id="crown-match-pct" class="text-xl font-mono-spec font-black text-yellow-300">98%</span>
+              <div class="text-[9px] font-mono-spec text-yellow-300/80 uppercase">Compatibility</div>
+            </div>
+          </div>
+
+          <!-- Justifications List -->
+          <div class="mt-4 space-y-2">
+            <span class="text-[11px] font-mono-spec font-bold uppercase text-slate-400">Match Justifications:</span>
+            <ul id="crown-justifications" class="space-y-1.5 text-xs text-slate-300 font-mono-spec">
+              <!-- Injected by algorithm -->
+            </ul>
+          </div>
+
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            <a id="crown-cta-link" href="#" class="rounded-xl bg-yellow-400 px-6 py-2.5 text-xs font-black text-slate-950 transition hover:bg-yellow-300">
+              Open Full Game Record →
+            </a>
+            <button id="crown-wish-btn" class="rounded-xl border border-white/[0.1] bg-[#111520] px-4 py-2.5 text-xs font-bold text-slate-300 hover:text-rose-300">
+              ♡ Add to Wishlist
+            </button>
+          </div>
+        </div>
+
+        <!-- #2 ALTERNATIVE & #3 HIDDEN GEM -->
+        <div class="grid gap-4 sm:grid-cols-2">
+          
+          <!-- #2 Alternative -->
+          <div class="rounded-2xl border border-white/[0.08] bg-[#111520] p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono-spec font-bold uppercase tracking-wider text-cyan-300">#2 Strong Alternative</span>
+              <span id="alt-match-pct" class="rounded bg-cyan-500/10 px-2 py-0.5 text-xs font-mono-spec font-bold text-cyan-300">91%</span>
+            </div>
+            <h4 id="alt-name" class="text-lg font-black text-white">Pokémon Gaia</h4>
+            <p id="alt-desc" class="text-xs text-slate-400 clamp-2">Description</p>
+            <a id="alt-link" href="#" class="inline-block text-xs font-mono-spec font-bold text-cyan-400 hover:underline">
+              View Alternative Record →
+            </a>
+          </div>
+
+          <!-- #3 Hidden Gem -->
+          <div class="rounded-2xl border border-white/[0.08] bg-[#111520] p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono-spec font-bold uppercase tracking-wider text-emerald-300">#3 Hidden Gem Pick</span>
+              <span id="gem-match-pct" class="rounded bg-emerald-500/10 px-2 py-0.5 text-xs font-mono-spec font-bold text-emerald-300">88%</span>
+            </div>
+            <h4 id="gem-name" class="text-lg font-black text-white">Pokémon Odyssey</h4>
+            <p id="gem-desc" class="text-xs text-slate-400 clamp-2">Description</p>
+            <a id="gem-link" href="#" class="inline-block text-xs font-mono-spec font-bold text-emerald-400 hover:underline">
+              View Hidden Gem Record →
+            </a>
+          </div>
+
+        </div>
+
+        <!-- Action: Compare My Top 3 -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-white/[0.08] bg-[#111520] p-5">
+          <div>
+            <div class="text-xs font-bold text-white">Want to see how your matches compare head-to-head?</div>
+            <p class="text-[11px] text-slate-400">Put your top 3 matches into the side-by-side comparison matrix.</p>
+          </div>
+          <button id="compare-top-3-btn" class="rounded-xl bg-gradient-to-r from-cyan-400 to-violet-400 px-6 py-2.5 text-xs font-black text-slate-950 transition hover:brightness-110 shrink-0">
+            ⇄ Compare My Top 3
+          </button>
+        </div>
+
+        <!-- Retake Button -->
+        <div class="text-center">
+          <button id="retake-quiz-btn" class="text-xs font-mono-spec text-slate-500 hover:text-slate-300 underline">
+            Retake Matchmaker Quiz
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+</BaseLayout>
+
+<style>
+  .active-mode {
+    background-color: var(--theme-pill-bg, rgba(34, 211, 238, 0.2));
+    color: var(--accent-highlight, #22d3ee);
+    border: 1px solid var(--theme-pill-border, rgba(34, 211, 238, 0.4));
+  }
+</style>
+
+<script>
+  interface Question {
+    category: string;
+    title: string;
+    sub: string;
+    quick: boolean; // included in Quick 5-step mode
+    options: {
+      label: string;
+      desc: string;
+      val: string;
+      dealbreaker?: boolean;
+    }[];
+  }
+
+  const QUESTIONS: Question[] = [
+    {
+      category: "1. Platform & Hardware",
+      title: "What device or emulator platform are you playing on?",
+      sub: "Determines hardware compatibility and patch format.",
+      quick: true,
+      options: [
+        { label: "GBA Emulator / Handheld", desc: "mGBA, Delta (iOS), Miyoo, Anbernic, EverDrive", val: "gba" },
+        { label: "Nintendo DS / 3DS", desc: "melonDS, Delta, R4 flashcart, TwilightMenu", val: "nds" },
+        { label: "PC Standalone (Windows / Steam Deck)", desc: "RPG Maker XP / Essentials native fan games", val: "pc" },
+        { label: "GBC Nostalgia", desc: "Game Boy Color, Crystal decomp hacks", val: "gbc" },
+        { label: "Any Platform Works", desc: "Open to any emulation runtime", val: "any" }
+      ]
+    },
+    {
+      category: "2. Completion Status",
+      title: "What completion status do you require?",
+      sub: "Filter out unfinished projects or episodic releases.",
+      quick: true,
+      options: [
+        { label: "Complete Campaigns Only", desc: "Start-to-finish story + full post-game content", val: "complete_only" },
+        { label: "Polished WIPs & Demos Welcome", desc: "Include ambitious ongoing projects (e.g. Sage, Rejuvenation)", val: "any_status" }
+      ]
+    },
+    {
+      category: "3. World & Region Type",
+      title: "What style of region and map do you prefer?",
+      sub: "Brand-new continents vs faithful reimaginations.",
+      quick: false,
+      options: [
+        { label: "Brand-New Original Region", desc: "100% fresh map, new towns, and custom gym leaders (e.g. Borrius, Naljo, Orbtus)", val: "new_region" },
+        { label: "Remixed / Expanded Canon", desc: "Enhanced classic Hoenn, Kanto, Johto, or Sinnoh with modern paths", val: "remix_canon" },
+        { label: "Multi-Region Odyssey", desc: "Massive scale spanning 2 or more complete regions", val: "multi_region" },
+        { label: "Open-World Johto/Kanto Sandbox", desc: "Explore freely without locked routes (e.g. Crystal Clear)", val: "open_world" }
+      ]
+    },
+    {
+      category: "4. Core Formula",
+      title: "Which core gameplay formula excites you most?",
+      sub: "Classic badges vs modern emergent loops.",
+      quick: true,
+      options: [
+        { label: "Traditional 8 Gyms + Elite 4", desc: "Classic hero progression with modern quality of life", val: "traditional" },
+        { label: "Run-Based Roguelike", desc: "Procedural routes, randomized boss trainers, per-run drafting (e.g. Emerald Rogue)", val: "roguelike" },
+        { label: "Dungeon Crawler / Mystery Dungeon", desc: "Deep dungeon exploration, tile navigation, and story", val: "dungeon" },
+        { label: "Open-World Non-Linear Sandbox", desc: "Gym scaling, free badge order, character customization", val: "open_sandbox" }
+      ]
+    },
+    {
+      category: "5. Difficulty & AI Level",
+      title: "What battle difficulty level do you want?",
+      sub: "Casual stroll vs competitive tournament-grade AI.",
+      quick: true,
+      options: [
+        { label: "Vanilla / Relaxed (1-2 Pips)", desc: "Cozy playthrough, no EV/IV min-maxing required", val: "relaxed" },
+        { label: "Challenging & Fair (3 Pips)", desc: "Gym leaders have smart movesets, modest strategy needed", val: "challenging" },
+        { label: "Hardcore Competitive AI (4-5 Pips)", desc: "Radical Red / Kaizo style, switch AI, team synergies", val: "hardcore" }
+      ]
+    },
+    {
+      category: "6. Grinding Tolerance",
+      title: "How much patience do you have for grinding levels?",
+      sub: "Minimal Grinding Mode vs classic EXP curves.",
+      quick: false,
+      options: [
+        { label: "Zero Grind / Minimal Grinding Mode", desc: "Built-in level caps, rare candies, zero tedious grinding", val: "no_grind" },
+        { label: "Normal Smooth Curve", desc: "Trainer battles naturally keep your team at level", val: "normal_curve" },
+        { label: "Old-School Heavy Grinding", desc: "Classic Gen 1/2 grind tolerance for true retro nostalgia", val: "heavy_grind" }
+      ]
+    },
+    {
+      category: "7. Pokédex & Creatures (Strict Toggle)",
+      title: "How do you feel about Fakemon and creature rosters?",
+      sub: "Strict dealbreaker toggle for official species only.",
+      quick: true,
+      options: [
+        { label: "Strict NO Fakemon (Official Species Only)", desc: "Dealbreaker: I only want real official Pokémon up to Gen 9", val: "no_fakemon", dealbreaker: true },
+        { label: "Fakemon Enthusiast", desc: "Love original creature designs (e.g. Uranium, Clover, Sage)", val: "fakemon" },
+        { label: "Infinite Fusions", desc: "Combine Pokémon into thousands of custom sprite hybrids", val: "fusion" },
+        { label: "Modern All-Gen Roster (Gen 1-9)", desc: "Want Paldea & Galar species available early on", val: "all_gens" }
+      ]
+    },
+    {
+      category: "8. Combat Mechanics",
+      title: "Which combat systems are non-negotiable?",
+      sub: "Modern battle features vs retro purity.",
+      quick: false,
+      options: [
+        { label: "Physical/Special Split & Modern Moves", desc: "Gen 4+ battle engine is essential", val: "split_essential" },
+        { label: "Mega Evolution & Gimmicks", desc: "Megas, Z-moves, or regional forms are desired", val: "megas" },
+        { label: "Purist Retro Combat", desc: "Keep original Gen 1/2/3 damage formulas and bugs intact", val: "retro_combat" }
+      ]
+    },
+    {
+      category: "9. Story Tone & Narrative",
+      title: "What story tone are you looking for?",
+      sub: "Narrative weight and protagonist framing.",
+      quick: false,
+      options: [
+        { label: "Deep Lore & Serious RPG Narrative", desc: "Rich worldbuilding, mature stakes (e.g. Reborn, Unbound)", val: "deep_lore" },
+        { label: "Team Rocket / Villain Perspective", desc: "Steal Pokémon, play from the dark side (e.g. Rocket Edition)", val: "villain" },
+        { label: "Classic Wholesome Pokémon Journey", desc: "Friendly rivals, lighthearted gym challenge", val: "classic_wholesome" },
+        { label: "Comedy & Satire", desc: "Humorous dialogue, parody, meme references (e.g. Clover)", val: "comedy" }
+      ]
+    },
+    {
+      category: "10. Visual Era Style",
+      title: "Which visual aesthetic appeals to you most?",
+      sub: "Color palettes and pixel art direction.",
+      quick: false,
+      options: [
+        { label: "Cozy GBC / Nostalgia Pixel Art", desc: "Emerald Seaglass, Crystal, Lazarus 2.0 aesthetics", val: "gbc_aesthetic" },
+        { label: "Refined GBA 32-bit Sprites", desc: "FireRed / Emerald peak 2D sprites", val: "gba_sprites" },
+        { label: "Gen 4/5 DS Style", desc: "Platinum / HeartGold / Black & White presentation", val: "ds_style" },
+        { label: "Custom HD / Fan Art Visuals", desc: "Custom battle UI and full screen artwork (PC fan games)", val: "custom_art" }
+      ]
+    },
+    {
+      category: "11. Special Quality of Life Features",
+      title: "Which standout feature do you value most?",
+      sub: "Key immersion and convenience mechanics.",
+      quick: false,
+      options: [
+        { label: "Following Pokémon Everywhere", desc: "Your companion walks behind you on the overworld", val: "following" },
+        { label: "Built-In Nuzlocke Tools", desc: "Automatic death boxes, level caps, shiny clauses", val: "nuzlocke" },
+        { label: "Expansive Side Quests & Mission Log", desc: "Dozens of rewarding side stories and missions", val: "quests" },
+        { label: "Co-Op / Multiplayer Support", desc: "Play through the adventure with a friend (e.g. Quetzal)", val: "coop" }
+      ]
+    },
+    {
+      category: "12. Playtime Budget",
+      title: "How much time do you want to invest?",
+      sub: "Quick weekend session vs multi-month epic.",
+      quick: false,
+      options: [
+        { label: "Quick / Compact (< 15 Hours)", desc: "Bite-sized story or snappy run", val: "time_short" },
+        { label: "Standard RPG Campaign (25-40 Hours)", desc: "Complete 8 gyms and main story", val: "time_medium" },
+        { label: "Massive Epic (50+ Hours / Endless)", desc: "Huge multi-region, battle frontiers, extensive post-game", val: "time_huge" }
+      ]
+    }
+  ];
+
+  async function initMatchmaker() {
+    const quickBtn = document.getElementById("mode-quick-btn");
+    const deepBtn = document.getElementById("mode-deep-btn");
+    const counterLabel = document.getElementById("step-counter-label");
+    const pctLabel = document.getElementById("step-pct-label");
+    const progressBar = document.getElementById("quiz-progress-bar");
+    const qCategory = document.getElementById("question-category");
+    const qTitle = document.getElementById("question-title");
+    const qSub = document.getElementById("question-sub");
+    const optionsContainer = document.getElementById("quiz-options-container");
+    const backBtn = document.getElementById("quiz-back-btn");
+    const surpriseBtn = document.getElementById("quiz-surprise-btn");
+    const qArea = document.getElementById("quiz-question-area");
+    const rArea = document.getElementById("quiz-results-area");
+    const retakeBtn = document.getElementById("retake-quiz-btn");
+
+    if (!qTitle || !optionsContainer) return;
+
+    let isDeepMode = true;
+    let currentStep = 0;
+    const userAnswers: Record<string, string> = {};
+
+    let activeQuestions: Question[] = [];
+    function updateActiveQuestions() {
+      activeQuestions = isDeepMode ? QUESTIONS : QUESTIONS.filter((q) => q.quick);
+    }
+    updateActiveQuestions();
+
+    let allGames: any[] = [];
+    try {
+      allGames = await fetch("/data/games.json").then((r) => r.json());
+    } catch {
+      allGames = [];
+    }
+
+    quickBtn?.addEventListener("click", () => {
+      isDeepMode = false;
+      quickBtn.className = "quiz-mode-btn active-mode rounded-xl px-4 py-2 font-black transition";
+      deepBtn!.className = "quiz-mode-btn rounded-xl px-4 py-2 font-bold text-slate-400 transition hover:text-white";
+      updateActiveQuestions();
+      resetQuiz();
+    });
+
+    deepBtn?.addEventListener("click", () => {
+      isDeepMode = true;
+      deepBtn.className = "quiz-mode-btn active-mode rounded-xl px-4 py-2 font-black transition";
+      quickBtn!.className = "quiz-mode-btn rounded-xl px-4 py-2 font-bold text-slate-400 transition hover:text-white";
+      updateActiveQuestions();
+      resetQuiz();
+    });
+
+    function renderQuestion() {
+      if (currentStep >= activeQuestions.length) {
+        showResults();
+        return;
+      }
+
+      const q = activeQuestions[currentStep];
+      const total = activeQuestions.length;
+      const pct = Math.round(((currentStep + 1) / total) * 100);
+
+      if (counterLabel) counterLabel.textContent = `Step ${currentStep + 1} of ${total}`;
+      if (pctLabel) pctLabel.textContent = `${pct}%`;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+
+      if (qCategory) qCategory.textContent = q.category;
+      if (qTitle) qTitle.textContent = q.title;
+      if (qSub) qSub.textContent = q.sub;
+
+      backBtn?.classList.toggle("hidden", currentStep === 0);
+
+      if (optionsContainer) {
+        optionsContainer.innerHTML = q.options.map((opt) => `
+          <button
+            class="match-opt-btn flex flex-col text-left rounded-2xl border border-white/[0.08] bg-[#111520] p-4 transition-all hover:border-cyan-400/50 hover:bg-[#1E2538] hover:shadow-lg group"
+            data-val="${opt.val}"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-black text-white group-hover:text-cyan-200">${opt.label}</span>
+              ${opt.dealbreaker ? '<span class="rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-mono-spec font-bold text-red-300">Strict Dealbreaker</span>' : ''}
+            </div>
+            <p class="mt-1 text-xs text-slate-400 leading-snug">${opt.desc}</p>
+          </button>
+        `).join("");
+
+        optionsContainer.querySelectorAll<HTMLButtonElement>(".match-opt-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const val = btn.dataset.val || "";
+            userAnswers[q.category] = val;
+            currentStep++;
+            renderQuestion();
+          });
+        });
+      }
+    }
+
+    backBtn?.addEventListener("click", () => {
+      if (currentStep > 0) {
+        currentStep--;
+        renderQuestion();
+      }
+    });
+
+    surpriseBtn?.addEventListener("click", () => {
+      const q = activeQuestions[currentStep];
+      const randomOpt = q.options[Math.floor(Math.random() * q.options.length)];
+      userAnswers[q.category] = randomOpt.val;
+      currentStep++;
+      renderQuestion();
+    });
+
+    function scoreGame(game: any) {
+      let score = game.rating * 10;
+      const reasons: string[] = [];
+
+      // Check strict NO Fakemon dealbreaker
+      const noFakemon = Object.values(userAnswers).includes("no_fakemon");
+      if (noFakemon && (game.dex.includes("Fakemon") || game.tags.includes("Fakemon") || game.category === "Fakemon")) {
+        return { score: -999, reasons: [] }; // Disqualified
+      }
+
+      // Platform match
+      const plat = Object.values(userAnswers);
+      if (plat.includes("gba") && game.runtime === "GBA") {
+        score += 15;
+        reasons.push("GBA hardware/mGBA verified compatibility");
+      } else if (plat.includes("pc") && game.runtime === "PC") {
+        score += 15;
+        reasons.push("Native PC standalone execution");
+      } else if (plat.includes("gbc") && (game.runtime === "GBC" || game.runtime === "GB")) {
+        score += 15;
+        reasons.push("Authentic nostalgic GBC runtime");
+      }
+
+      // Formula
+      if (plat.includes("roguelike") && (game.category === "Roguelike" || game.tags.includes("Roguelike"))) {
+        score += 25;
+        reasons.push("Run-based procedural roguelike loop");
+      }
+      if (plat.includes("open_sandbox") && (game.tags.includes("Open World") || game.category === "Open World")) {
+        score += 20;
+        reasons.push("Non-linear gym scaling and open-world freedom");
+      }
+
+      // Difficulty
+      if (plat.includes("hardcore") && (game.pips >= 4 || game.difficulty.includes("Hard"))) {
+        score += 15;
+        reasons.push("Competitive AI and high tactical difficulty");
+      }
+      if (plat.includes("relaxed") && game.pips <= 2) {
+        score += 15;
+        reasons.push("Smooth, relaxed vanilla pacing");
+      }
+
+      // Minimal grind
+      if (plat.includes("no_grind") && (game.grind.includes("Low") || game.tags.includes("Minimal Grinding"))) {
+        score += 15;
+        reasons.push("Minimal grinding mode with level caps");
+      }
+
+      // Following pokemon
+      if (plat.includes("following") && game.tags.includes("Following Pokémon")) {
+        score += 15;
+        reasons.push("Overworld following Pokémon companion engine");
+      }
+
+      // Story
+      if (plat.includes("deep_lore") && (game.story.includes("Heavy") || game.category === "Story Focused")) {
+        score += 15;
+        reasons.push("Rich narrative depth and original lore");
+      }
+      if (plat.includes("villain") && (game.tags.includes("Team Rocket") || game.id.includes("rocket"))) {
+        score += 25;
+        reasons.push("Villain perspective from Team Rocket's ranks");
+      }
+
+      return { score, reasons };
+    }
+
+    function showResults() {
+      qArea?.classList.add("hidden");
+      rArea?.classList.remove("hidden");
+
+      const evaluated = allGames
+        .map((g) => {
+          const { score, reasons } = scoreGame(g);
+          return { g, score, reasons };
+        })
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+      const crown = evaluated[0]?.g || allGames[0];
+      const crownReasons = evaluated[0]?.reasons || ["Superb rating", "High mechanical polish", "Community essential"];
+      const alt = evaluated[1]?.g || allGames[1];
+      const gem = evaluated.find((x, i) => i > 1 && x.g.category === "Hidden Gem")?.g || evaluated[2]?.g || allGames[2];
+
+      // Populate Crown Card
+      (document.getElementById("crown-name") as HTMLElement).textContent = crown.name;
+      (document.getElementById("crown-match-pct") as HTMLElement).textContent = "98%";
+      (document.getElementById("crown-cta-link") as HTMLAnchorElement).href = `/games/${crown.id}`;
+
+      const justList = document.getElementById("crown-justifications");
+      if (justList) {
+        justList.innerHTML = crownReasons.slice(0, 4).map((r) => `
+          <li class="flex items-center gap-2">
+            <span class="text-emerald-400">✓</span>
+            <span>${r}</span>
+          </li>
+        `).join("");
+      }
+
+      // Populate Alternative Card
+      (document.getElementById("alt-name") as HTMLElement).textContent = alt.name;
+      (document.getElementById("alt-desc") as HTMLElement).textContent = alt.description;
+      (document.getElementById("alt-link") as HTMLAnchorElement).href = `/games/${alt.id}`;
+
+      // Populate Hidden Gem Card
+      (document.getElementById("gem-name") as HTMLElement).textContent = gem.name;
+      (document.getElementById("gem-desc") as HTMLElement).textContent = gem.description;
+      (document.getElementById("gem-link") as HTMLAnchorElement).href = `/games/${gem.id}`;
+
+      // Crown Wishlist trigger
+      document.getElementById("crown-wish-btn")?.addEventListener("click", () => {
+        (window as any).toggleWishlist?.(crown.id, crown.name);
+      });
+
+      // Compare top 3 button
+      document.getElementById("compare-top-3-btn")?.addEventListener("click", () => {
+        const top3Ids = [crown.id, alt.id, gem.id].join(",");
+        window.location.href = `/compare?games=${top3Ids}`;
+      });
+    }
+
+    function resetQuiz() {
+      currentStep = 0;
+      Object.keys(userAnswers).forEach((k) => delete userAnswers[k]);
+      qArea?.classList.remove("hidden");
+      rArea?.classList.add("hidden");
+      renderQuestion();
+    }
+
+    retakeBtn?.addEventListener("click", resetQuiz);
+
+    renderQuestion();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initMatchmaker);
+  } else {
+    initMatchmaker();
+  }
+  document.addEventListener("astro:page-load", initMatchmaker);
+</script>

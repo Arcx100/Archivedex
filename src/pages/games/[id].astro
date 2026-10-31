@@ -1,501 +1,1102 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import GameCard from "../../components/GameCard.astro";
-import { games } from "../../data/games";
+import {
+  games,
+  getDifficultyPips,
+  getPlaytime,
+  getCleanBaseRom,
+  getPatchFormat,
+  getEmulatorCompat,
+  getHexagonStats,
+  getLineage,
+  getKeyDetails,
+  ARCHIVE_STAT_AVERAGES
+} from "../../data/games";
 
 export function getStaticPaths() {
-  return games.map(game => ({ params: { id: game.id }, props: { game } }));
+  return games.map((game) => ({ params: { id: game.id }, props: { game } }));
 }
 
 const { game } = Astro.props;
 
-const related = games
-  .filter(e => e.id !== game.id)
-  .filter(e => e.category === game.category || e.type === game.type)
-  .sort((a,b) => b.rating - a.rating)
-  .slice(0, 3);
+// 1. Similar Gameplay recommendations
+const similarGames = games
+  .filter((e) => e.id !== game.id)
+  .map((e) => {
+    let score = 0;
+    if (e.category === game.category) score += 4;
+    if (e.runtime === game.runtime) score += 3;
+    if (e.difficulty === game.difficulty) score += 2;
+    if (e.base === game.base) score += 1;
+    return { game: e, score };
+  })
+  .sort((a, b) => (b.score !== a.score ? b.score - a.score : b.game.rating - a.game.rating))
+  .slice(0, 4)
+  .map((x) => x.game);
 
-// SVG arc math — r=54, circumference = 2πr ≈ 339.3
-const ARC_R   = 54;
-const ARC_C   = 2 * Math.PI * ARC_R;
-const arcFill = ARC_C * (game.rating / 10);
-const arcGap  = ARC_C - arcFill;
+// 2. By Mechanics & Shared Tags recommendations
+const tagGames = games
+  .filter((e) => e.id !== game.id)
+  .map((e) => {
+    const sharedTags = e.tags.filter((t) => game.tags.includes(t));
+    return { game: e, sharedCount: sharedTags.length };
+  })
+  .filter((x) => x.sharedCount > 0)
+  .sort((a, b) => (b.sharedCount !== a.sharedCount ? b.sharedCount - a.sharedCount : b.game.rating - a.game.rating))
+  .slice(0, 4)
+  .map((x) => x.game);
 
-// Category gradient
-const catGradient: Record<string, { from: string; to: string }> = {
-  "Essential Collection": { from: "#06b6d4", to: "#7c3aed" },
-  "Must Play":            { from: "#7c3aed", to: "#db2777" },
-  "Story Focused":        { from: "#7c3aed", to: "#4338ca" },
-  "Open World":           { from: "#059669", to: "#0891b2" },
-  "Roguelike":            { from: "#ea580c", to: "#dc2626" },
-  "Difficulty":           { from: "#dc2626", to: "#9f1239" },
-  "Fakemon":              { from: "#d97706", to: "#b45309" },
-  "Competitive":          { from: "#0891b2", to: "#1d4ed8" },
-  "Anime Inspired":       { from: "#db2777", to: "#7c3aed" },
-  "Historical Classic":   { from: "#92400e", to: "#78350f" },
-  "Hidden Gem":           { from: "#059669", to: "#047857" },
-  "Experimental":         { from: "#6d28d9", to: "#4c1d95" },
-  "Collector Only":       { from: "#374151", to: "#1f2937" },
-  "PMD Inspired":         { from: "#0d9488", to: "#134e4a" },
-};
-const grad = catGradient[game.category] ?? { from: "#334155", to: "#1e293b" };
+// 3. More from Creator recommendations
+const creatorNorm = (game.creator || "").trim().toLowerCase();
+const creatorGames =
+  creatorNorm && creatorNorm !== "community" && creatorNorm !== "unknown"
+    ? games.filter((e) => e.id !== game.id && (e.creator || "").trim().toLowerCase() === creatorNorm)
+    : [];
 
-// Experience scores derived from fields
-function storyScore(s: string) {
-  if (s.includes("Very Story Heavy")) return 9.5;
-  if (s.includes("Story Heavy"))      return 8.5;
-  if (s.includes("Good Story"))       return 7.5;
-  if (s.includes("Standard"))         return 6.0;
-  return 4.0;
-}
-function difficultyScore(d: string) {
-  if (d.includes("Kaizo"))       return 10;
-  if (d.includes("Hard Default") && !d.includes("Optional")) return 8.5;
-  if (d.includes("Hard"))        return 7.0;
-  if (d.includes("Normal"))      return 5.5;
-  return 3.0;
-}
-function lengthScore(l: string) {
-  if (l.includes("Huge"))         return 9.5;
-  if (l.includes("Long"))         return 7.5;
-  if (l.includes("Medium"))       return 6.0;
-  if (l.includes("Run-Based"))    return 5.0;
-  return 4.0;
-}
-function replayScore(cat: string) {
-  if (cat === "Roguelike")    return 9.5;
-  if (cat === "Competitive")  return 8.5;
-  if (cat === "Open World")   return 8.0;
-  return 5.0;
+const fallbackCreatorGames =
+  creatorGames.length === 0
+    ? games.filter((e) => e.id !== game.id && e.runtime === game.runtime).sort((a, b) => b.rating - a.rating).slice(0, 4)
+    : [];
+
+function catSlug(category: string): string {
+  return category.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-const expScores = [
-  { label: "Story",       score: storyScore(game.story),          color: "#c4b5fd" },
-  { label: "Difficulty",  score: difficultyScore(game.difficulty), color: "#f87171" },
-  { label: "Length",      score: lengthScore(game.length),         color: "#6ee7b7" },
-  { label: "Replayability", score: replayScore(game.category),    color: "#67e8f9" },
+const gradClass = `cat-grad-${catSlug(game.category)}`;
+const pips = getDifficultyPips(game);
+const playtime = getPlaytime(game);
+const cleanBaseRom = getCleanBaseRom(game);
+const patchFormat = getPatchFormat(game);
+const compat = getEmulatorCompat(game);
+const radar = getHexagonStats(game);
+const lineage = getLineage(game);
+const keySpecs = getKeyDetails(game);
+
+const hasActualLineage =
+  lineage !== null &&
+  Boolean(
+    (lineage.prequels && lineage.prequels.length > 0) ||
+    (lineage.sequels && lineage.sequels.length > 0) ||
+    (lineage.variants && lineage.variants.length > 0) ||
+    (lineage.sharedUniverse && lineage.sharedUniverse.length > 0)
+  );
+
+// Aspect ratio class for 3D cartridge box
+const aspectClass =
+  game.runtime === "GBA" ? "aspect-box-gba" :
+  game.runtime === "GBC" || game.runtime === "GB" ? "aspect-box-gbc" :
+  game.runtime === "NDS" || game.runtime === "3DS" ? "aspect-box-nds" : "aspect-box-pc";
+
+// Dual Rating 4 Ring Gauges
+const ringScores = [
+  { label: "Story", score: Math.round(game.story.includes("Very") ? 95 : game.story.includes("Story Heavy") ? 88 : game.story.includes("Good") ? 78 : 65), color: "#c4b5fd" },
+  { label: "Gameplay", score: Math.round(game.rating * 9.8), color: "#22d3ee" },
+  { label: "Content", score: Math.round(game.length.includes("Huge") ? 98 : game.length.includes("Long") ? 85 : 72), color: "#34d399" },
+  { label: "Replayability", score: Math.round(game.category === "Roguelike" ? 99 : game.tags.includes("Open World") ? 92 : 75), color: "#fde047" },
 ];
 
-// Arc for experience score (r=28, c≈175.9)
-const EXP_R = 28;
-const EXP_C = 2 * Math.PI * EXP_R;
+const RING_R = 30;
+const RING_C = 2 * Math.PI * RING_R;
 
-const linuxCompatColor =
-  game.linuxCompat === "mGBA Ready"    ? { border:"border-emerald-400/30", bg:"bg-emerald-400/10", text:"text-emerald-300" }
-  : game.linuxCompat === "Wine / Proton" ? { border:"border-yellow-400/30",  bg:"bg-yellow-400/10",  text:"text-yellow-300"  }
-  : { border:"border-slate-700", bg:"bg-slate-900", text:"text-slate-400" };
+// Hexagon Radar Chart Coordinates math
+// Center (150, 150), Radius 100
+const CX = 150;
+const CY = 150;
+const RADAR_R = 95;
 
-const tagIcon: Record<string, string> = {
-  "New Region":"🗺️","Mega Evolution":"💎","Fakemon":"✨","Difficulty":"⚔️",
-  "Roguelike":"🎲","Open World":"🌍","Side Quests":"📋","Battle Frontier":"⚔",
-  "QoL":"✅","Post Game":"🏆","Great Story":"📖",
-};
+const metrics = [
+  { key: "difficulty", label: "Difficulty", val: radar.difficulty, avg: ARCHIVE_STAT_AVERAGES.difficulty, angle: -90 },
+  { key: "exploration", label: "Exploration", val: radar.exploration, avg: ARCHIVE_STAT_AVERAGES.exploration, angle: -30 },
+  { key: "grinding", label: "Grinding", val: radar.grinding, avg: ARCHIVE_STAT_AVERAGES.grinding, angle: 30 },
+  { key: "qol", label: "QoL Features", val: radar.qol, avg: ARCHIVE_STAT_AVERAGES.qol, angle: 90 },
+  { key: "balance", label: "Game Balance", val: radar.balance, avg: ARCHIVE_STAT_AVERAGES.balance, angle: 150 },
+  { key: "music", label: "OST & Audio", val: radar.music, avg: ARCHIVE_STAT_AVERAGES.music, angle: 210 },
+];
+
+function getRadarPoint(val: number, angleDeg: number, maxRadius = RADAR_R) {
+  const rad = (angleDeg * Math.PI) / 180;
+  const dist = (val / 100) * maxRadius;
+  return {
+    x: Math.round((CX + dist * Math.cos(rad)) * 10) / 10,
+    y: Math.round((CY + dist * Math.sin(rad)) * 10) / 10,
+  };
+}
+
+// Generate concentric hexagon level outlines (25%, 50%, 75%, 100%)
+const hexLevels = [25, 50, 75, 100].map((level) => {
+  return metrics
+    .map((m) => {
+      const p = getRadarPoint(level, m.angle);
+      return `${p.x},${p.y}`;
+    })
+    .join(" ");
+});
+
+// Polygon points for Archive Average Benchmark (Medium Hexagon ~53%)
+const avgPolygonPoints = metrics
+  .map((m) => {
+    const p = getRadarPoint(m.avg, m.angle);
+    return `${p.x},${p.y}`;
+  })
+  .join(" ");
+
+// Polygon points for game's actual stats
+const statPolygonPoints = metrics
+  .map((m) => {
+    const p = getRadarPoint(m.val, m.angle);
+    return `${p.x},${p.y}`;
+  })
+  .join(" ");
 ---
 
-<BaseLayout title={`${game.name} · ArchiveDex`} description={game.description}>
-  <main class="mx-auto max-w-6xl px-6 py-10">
-
-    <!-- Breadcrumb -->
-    <div class="mb-6 flex items-center gap-3 text-sm">
-      <a href="/library" class="font-black text-cyan-300 transition hover:text-cyan-200">Library</a>
-      <span class="text-slate-700">/</span>
-      <span class="truncate text-slate-500">{game.name}</span>
-    </div>
-
-    <!-- ══════════════════════════════════════ -->
-    <!-- HERO                                  -->
-    <!-- ══════════════════════════════════════ -->
-    <section class="relative overflow-hidden rounded-[2rem] border border-slate-700/60 spotlight-active">
-      <!-- Category gradient backdrop at low opacity — shared-element morph target -->
-      <div
-        class="absolute inset-0"
-        style={`background: linear-gradient(135deg, ${grad.from}22, ${grad.to}18, #070914 65%)`}
-        transition:name={`cover-${game.id}`}
-      ></div>
-      <div class="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(34,211,238,0.10),transparent_50%)]"></div>
-      <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(168,85,247,0.08),transparent_50%)]"></div>
-
-      <!-- Ambient particles -->
-      <div class="particle-field">
-        {Array.from({ length: 14 }).map((_, i) => {
-          const left = (i * 137.5) % 100;
-          const duration = 7 + (i % 5) * 1.4;
-          const delay = (i % 7) * -1.3;
-          const size = i % 3 === 0 ? "0.65rem" : "0.4rem";
-          const glyphs = ["✦","◆","✧","⬡"];
-          const glyph = glyphs[i % glyphs.length];
-          return (
-            <span
-              class="particle text-cyan-200"
-              style={`left:${left}%; font-size:${size}; --p-duration:${duration}s; --p-delay:${delay}s; --p-opacity:0.35; --p-dx:${(i % 5 - 2) * 14}px;`}
-            >{glyph}</span>
-          );
-        })}
+<BaseLayout title={`${game.name} · ArchiveDex Preservation Record`} description={game.description}>
+  
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- STICKY FROSTED-GLASS SUBHEADER ON SCROLL   -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="sticky-record-bar" class="fixed top-16 inset-x-0 z-20 hidden border-b border-white/[0.1] bg-[#111520]/90 px-6 py-2.5 backdrop-blur-xl shadow-lg transition-all duration-300">
+    <div class="mx-auto flex max-w-6xl items-center justify-between">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="rounded bg-black/40 px-2 py-0.5 text-[10px] font-mono-spec font-bold text-cyan-300">{game.runtime}</span>
+        <h2 class="text-sm font-black text-white truncate">{game.name}</h2>
+        <span class="text-xs font-mono-spec text-yellow-300 font-bold">★ {game.rating}</span>
       </div>
 
-      <!-- Cursor spotlight -->
-      <div class="spotlight"></div>
+      <div class="flex items-center gap-2">
+        <button class="card-action-wishlist rounded-lg border border-white/[0.1] px-3 py-1 text-xs font-bold text-slate-300 hover:border-rose-400 hover:text-rose-300" data-id={game.id} data-name={game.name}>
+          ♡ Wishlist
+        </button>
+        <button class="card-action-compare rounded-lg border border-white/[0.1] px-3 py-1 text-xs font-bold text-slate-300 hover:border-cyan-400 hover:text-cyan-300" data-id={game.id} data-name={game.name}>
+          ⇄ Compare
+        </button>
+        {game.officialSource && (
+          <a href={game.officialSource} target="_blank" rel="noopener noreferrer" class="rounded-lg bg-cyan-400 px-3.5 py-1 text-xs font-black text-slate-950 hover:bg-cyan-300">
+            Official Source ↗
+          </a>
+        )}
+      </div>
+    </div>
+  </div>
 
-      <div class="relative p-7 lg:p-10">
-        <!-- Badges -->
-        <div class="mb-5 flex flex-wrap gap-2" data-reveal>
-          <span class="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-300">{game.type}</span>
-          <span class="rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-xs font-black text-violet-300">{game.base}</span>
-          <span class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-300">{game.status}</span>
-          <span
-            class="rounded-full border px-3 py-1 text-xs font-black"
-            style={`border-color:${grad.from}60; background:${grad.from}18; color:${grad.from}`}
-          >{game.category}</span>
+  <main class="mx-auto max-w-6xl px-6 py-8">
+
+    <!-- Breadcrumb Nav -->
+    <div class="mb-5 flex items-center gap-2 text-xs font-mono-spec text-slate-500">
+      <a href="/library" class="text-cyan-400 hover:underline">Library</a>
+      <span>/</span>
+      <span class="text-slate-400">{game.category}</span>
+      <span>/</span>
+      <span class="text-white truncate">{game.name}</span>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- HERO: BLURRED BANNER & 3D CARTRIDGE BOX     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section id="record-hero-trigger" class="relative overflow-hidden rounded-3xl border border-white/[0.08] border-t-white/[0.14] bg-[#161B29] p-6 lg:p-8 shadow-2xl">
+      
+      <!-- Blurred in-game background banner overlay -->
+      <div class={`absolute inset-0 ${gradClass} opacity-15 filter blur-3xl pointer-events-none`}></div>
+      <div class="absolute inset-0 hero-backdrop-gradient bg-gradient-to-t from-[#161B29] via-[#161B29]/90 to-transparent pointer-events-none"></div>
+
+      <div class="relative grid gap-8 lg:grid-cols-[auto_1fr] items-start">
+        
+        <!-- 3D Cartridge Box-Art Card overlapping edge -->
+        <div class="tilt-card relative w-48 sm:w-56 shrink-0 mx-auto lg:mx-0">
+          <div class="tilt-glare"></div>
+          <div class={`hardware-box-frame ${aspectClass} ${gradClass} p-4 flex flex-col justify-between shadow-2xl border-2 border-white/20`}>
+            
+            <div class="flex items-center justify-between z-10">
+              <span class="rounded bg-black/70 px-2 py-0.5 text-[10px] font-mono-spec font-black text-white uppercase backdrop-blur-md">
+                {game.runtime}
+              </span>
+              <span class="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[9px] font-mono-spec font-bold text-emerald-300 border border-emerald-400/30">
+                {game.status}
+              </span>
+            </div>
+
+            <!-- Visual cartridge label insignia -->
+            <div class="my-auto text-center z-10 py-4">
+              <span class="text-4xl opacity-30 select-none">🎮</span>
+              <div class="mt-1 text-xs font-black text-white leading-tight drop-shadow-md clamp-2">
+                {game.name}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between z-10 border-t border-white/10 pt-2 text-[10px] font-mono-spec text-slate-300">
+              <span>{game.base}</span>
+              <span class="font-bold text-yellow-300">★ {game.rating}</span>
+            </div>
+          </div>
         </div>
 
-        <div class="grid gap-8 lg:grid-cols-[1fr_auto]">
-          <!-- Left -->
-          <div>
-            <h1
-              class="text-5xl font-black leading-tight tracking-tight text-white md:text-6xl"
-              transition:name={`name-${game.id}`}
-            >{game.name}</h1>
-            <p class="mt-2.5 text-sm text-slate-500" data-reveal style="--reveal-delay:80ms">by <span class="font-bold text-slate-300">{game.creator}</span></p>
-            <p class="mt-5 max-w-2xl text-lg leading-8 text-slate-300" data-reveal style="--reveal-delay:140ms">{game.description}</p>
+        <!-- Hero Metadata & Title -->
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="rounded-md bg-cyan-500/10 border border-cyan-400/30 px-2.5 py-1 text-xs font-mono-spec font-bold text-cyan-300">
+              {game.type}
+            </span>
+            <span class="rounded-md bg-violet-500/10 border border-violet-400/30 px-2.5 py-1 text-xs font-mono-spec font-bold text-violet-300">
+              Base: {game.base}
+            </span>
+            <span class="rounded-md bg-yellow-500/10 border border-yellow-400/30 px-2.5 py-1 text-xs font-mono-spec font-bold text-yellow-300">
+              ★ {game.rating} / 10
+            </span>
+            <span class="rounded-md bg-slate-800 px-2.5 py-1 text-xs font-mono-spec text-slate-400">
+              ⏱ {playtime}
+            </span>
+          </div>
 
-            <!-- CTA row -->
-            <div class="mt-7 flex flex-wrap gap-3" data-reveal style="--reveal-delay:200ms">
-              {game.officialSource && (
-                <a href={game.officialSource} target="_blank" rel="noopener noreferrer"
-                   class="magnetic-btn flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-2.5 text-sm font-black text-emerald-300 transition hover:border-emerald-400/50 hover:bg-emerald-400/15">
-                  ↗ Official Source
-                </a>
-              )}
-              <button id="add-to-compare" data-game-id={game.id}
-                class="magnetic-btn flex items-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/8 px-5 py-2.5 text-sm font-black text-cyan-300 transition hover:border-cyan-400/50 hover:bg-cyan-400/12">
-                ⊕ Compare
-              </button>
-              <a href="/random"
-                 class="magnetic-btn flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 px-5 py-2.5 text-sm font-black text-slate-400 transition hover:border-violet-400/50 hover:text-violet-300">
-                🎲 Random
+          <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+            {game.name}
+          </h1>
+
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono-spec text-slate-400">
+            <span>Creator: <strong class="text-white">{game.creator || "Community Project"}</strong></span>
+            <span>·</span>
+            <span>Category: <strong class="text-cyan-300">{game.category}</strong></span>
+            <span>·</span>
+            <span>Status: <strong class="text-emerald-400">{game.status}</strong></span>
+          </div>
+
+          <p class="text-sm leading-relaxed text-slate-300 max-w-3xl">
+            {game.description}
+          </p>
+
+          <!-- Action Buttons Bar -->
+          <div class="pt-2 flex flex-wrap items-center gap-3">
+            {game.officialSource ? (
+              <a
+                href={game.officialSource}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center gap-2 rounded-xl bg-cyan-400 px-5 py-2.5 text-xs font-black text-slate-950 transition hover:bg-cyan-300 shadow-[0_0_20px_rgba(34,211,238,0.3)]"
+              >
+                <span>↗ Official Creator Channel</span>
               </a>
-            </div>
-          </div>
+            ) : (
+              <span class="rounded-xl border border-white/[0.08] bg-[#111520] px-4 py-2.5 text-xs font-mono-spec text-slate-500">
+                Creator Channel Not Indexed
+              </span>
+            )}
 
-          <!-- Right: SVG arc rating -->
-          <div
-            class="flex flex-col items-center justify-center rounded-2xl border border-yellow-300/20 bg-yellow-300/5 px-8 py-6"
-            transition:name={`rating-${game.id}`}
-          >
-            <svg width="140" height="140" viewBox="0 0 140 140" class="block">
-              <defs>
-                <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%"   stop-color="#f59e0b"/>
-                  <stop offset="100%" stop-color="#fde047"/>
-                </linearGradient>
-              </defs>
-              <!-- Track -->
-              <circle cx="70" cy="70" r={ARC_R} fill="none" stroke="#1e293b" stroke-width="8" />
-              <!-- Fill — starts from 12 o'clock (rotate -90deg) -->
-              <circle
-                cx="70" cy="70" r={ARC_R}
-                fill="none"
-                stroke="url(#arcGrad)"
-                stroke-width="8"
-                stroke-linecap="round"
-                stroke-dasharray={`${arcFill} ${arcGap}`}
-                transform="rotate(-90 70 70)"
-                style="filter:drop-shadow(0 0 6px rgba(253,224,71,0.6));--arc-total:339.3;stroke-dashoffset:339.3;animation:arc-fill 1.1s cubic-bezier(0.16,1,0.3,1) 0.15s both;"
-              />
-              <!-- Center text -->
-              <text x="70" y="65" text-anchor="middle" font-size="26" font-weight="900" fill="#fde047" font-family="system-ui, sans-serif" data-counter={game.rating} data-counter-duration="1100">0</text>
-              <text x="70" y="82" text-anchor="middle" font-size="10" fill="#92400e" font-family="system-ui, sans-serif" font-weight="700">/ 10</text>
-            </svg>
-            <div class="mt-2 text-center">
-              <div class="text-xs font-black uppercase tracking-widest text-yellow-300/60">Archive Rating</div>
-            </div>
+            <button
+              class="card-action-wishlist flex items-center gap-1.5 rounded-xl border border-white/[0.1] bg-[#111520] px-4 py-2.5 text-xs font-bold text-slate-300 hover:border-rose-400/50 hover:text-rose-300"
+              data-id={game.id}
+              data-name={game.name}
+            >
+              <span>♡</span> Add to Wishlist
+            </button>
+
+            <button
+              class="card-action-compare flex items-center gap-1.5 rounded-xl border border-white/[0.1] bg-[#111520] px-4 py-2.5 text-xs font-bold text-slate-300 hover:border-cyan-400/50 hover:text-cyan-300"
+              data-id={game.id}
+              data-name={game.name}
+            >
+              <span>⇄</span> Compare Game
+            </button>
           </div>
         </div>
+
       </div>
     </section>
 
-    <!-- ══════════════════════════════════════ -->
-    <!-- TABS                                  -->
-    <!-- ══════════════════════════════════════ -->
-    <div class="sticky top-[88px] z-30 mt-1 border-b border-slate-800/80 bg-[#070914]/90 backdrop-blur-xl">
-      <div class="relative flex gap-0">
-        {["Overview","Features","Source Notes","Similar"].map((tab) => (
-          <button
-            class="tab-btn px-5 py-3.5 text-sm font-black text-slate-500 transition-colors hover:text-slate-300"
-            data-tab={tab.toLowerCase().replace(" ","-")}
-          >{tab}</button>
-        ))}
-        <span class="tab-indicator" id="tab-indicator"></span>
-      </div>
-    </div>
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- SIDE-BY-SIDE: KEY DETAILS (LIST) & DUAL RATING VISUALIZER      -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section class="mt-8 grid gap-6 lg:grid-cols-2 items-stretch" data-reveal>
+      
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- 1. KEY DETAILS (STRUCTURED VERTICAL LIST)   -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div class="rounded-3xl border border-white/[0.08] bg-[#161B29] p-6 sm:p-7 flex flex-col justify-between shadow-xl">
+        <div>
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-widest text-cyan-300 font-mono-spec">Technical Architecture & Features</span>
+              <h2 class="text-xl font-black text-white mt-1 flex items-center gap-2">
+                <span>⚙️</span> Key Project Details
+              </h2>
+            </div>
+            <span class="rounded-xl border border-white/[0.08] bg-[#111520] px-3 py-1 font-mono-spec text-[10px] text-slate-400">
+              Curated Museum Spec
+            </span>
+          </div>
 
-    <!-- ══════════════════════════════════════ -->
-    <!-- TAB: OVERVIEW                         -->
-    <!-- ══════════════════════════════════════ -->
-    <div id="tab-overview" class="tab-panel mt-8">
-      <!-- Why it matters -->
-      <div class="mb-6 rounded-2xl border-l-4 border-cyan-400/70 bg-slate-950/60 p-6 backdrop-blur-sm ring-1 ring-slate-700/40" data-reveal>
-        <p class="mb-2 text-xs font-black uppercase tracking-[0.28em] text-cyan-300">Why it matters</p>
-        <p class="leading-7 text-slate-300">{game.whyItMatters}</p>
-      </div>
-
-      <!-- Experience scores -->
-      <div class="mb-6 rounded-2xl border border-slate-700/60 bg-slate-950/60 p-6" data-reveal style="--reveal-delay:60ms">
-        <p class="mb-5 text-xs font-black uppercase tracking-[0.28em] text-slate-500">Experience Scores</p>
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {expScores.map(({ label, score, color }) => {
-            const fill = EXP_C * (score / 10);
-            const gap  = EXP_C - fill;
-            return (
-              <div class="flex flex-col items-center gap-2">
-                <svg width="80" height="80" viewBox="0 0 80 80">
-                  <circle cx="40" cy="40" r={EXP_R} fill="none" stroke="#1e293b" stroke-width="6"/>
-                  <circle cx="40" cy="40" r={EXP_R} fill="none" stroke={color} stroke-width="6"
-                    stroke-linecap="round" stroke-dasharray={`${fill} ${gap}`}
-                    transform="rotate(-90 40 40)"
-                    style={`filter:drop-shadow(0 0 4px ${color}66);--arc-total:${EXP_C};stroke-dashoffset:${EXP_C};animation:arc-fill 0.9s cubic-bezier(0.16,1,0.3,1) 0.2s both;`}
-                  />
-                  <text x="40" y="44" text-anchor="middle" font-size="15" font-weight="900" fill={color} font-family="system-ui,sans-serif" data-counter={score} data-counter-duration="900">0</text>
-                </svg>
-                <span class="text-xs font-black text-slate-400">{label}</span>
+          <!-- Structured Vertical List -->
+          <ul class="mt-4 divide-y divide-white/[0.06] text-xs">
+            
+            <!-- 1. Pokédex & Generations Scope -->
+            <li class="py-3.5 first:pt-1">
+              <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1.5 mb-1.5">
+                <span class="flex items-center gap-1.5 text-cyan-300 font-mono-spec font-black text-[11px] uppercase tracking-wider">
+                  <span>🧬</span> Pokédex & Generations
+                </span>
+                <span class="rounded bg-cyan-400/10 px-2 py-0.5 text-cyan-300 font-mono-spec font-bold text-[10px] max-w-full leading-tight">
+                  {keySpecs.dexCount}
+                </span>
               </div>
-            );
-          })}
-        </div>
-      </div>
+              <p class="text-slate-300 font-medium leading-relaxed pl-5">
+                {keySpecs.pokedexGenerations}
+              </p>
+            </li>
 
-      <!-- Best for / Avoid if -->
-      <div class="grid gap-4 md:grid-cols-2" data-reveal style="--reveal-delay:100ms">
-        <div class="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-5">
-          <p class="mb-3 text-xs font-black uppercase tracking-[0.28em] text-emerald-300">Best For</p>
-          <ul class="space-y-2">
-            {game.bestFor.map((item: string) => (
-              <li class="flex items-start gap-2.5 text-sm leading-6 text-slate-300">
-                <span class="mt-0.5 shrink-0 font-black text-emerald-400">✦</span>{item}
-              </li>
-            ))}
+            <!-- 2. Combat Mechanics & Battle Gimmicks -->
+            <li class="py-3.5">
+              <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1.5 mb-1.5">
+                <span class="flex items-center gap-1.5 text-violet-300 font-mono-spec font-black text-[11px] uppercase tracking-wider">
+                  <span>⚔️</span> Combat Mechanics & Gimmicks
+                </span>
+                <span class="rounded bg-violet-400/10 px-2 py-0.5 text-violet-300 font-mono-spec font-bold text-[10px] max-w-full leading-tight">
+                  {game.base} ({game.runtime})
+                </span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 pl-5 mt-1">
+                {keySpecs.combatGimmicks.map((gimmick) => (
+                  <span class="rounded-lg border border-violet-400/20 bg-violet-500/10 px-2 py-0.5 text-[10px] font-mono-spec font-bold text-violet-200">
+                    {gimmick}
+                  </span>
+                ))}
+              </div>
+            </li>
+
+            <!-- 3. World & Region Architecture -->
+            <li class="py-3.5">
+              <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1.5 mb-1.5">
+                <span class="flex items-center gap-1.5 text-emerald-300 font-mono-spec font-black text-[11px] uppercase tracking-wider">
+                  <span>🗺️</span> World & Region Architecture
+                </span>
+                <span class="rounded bg-emerald-400/10 px-2 py-0.5 text-emerald-300 font-mono-spec font-bold text-[10px] max-w-full leading-tight">
+                  {game.tags.includes("Open World") ? "Open Sandbox" : game.tags.includes("Roguelike") ? "Procedural Rogue" : "Structured Map"}
+                </span>
+              </div>
+              <p class="text-slate-300 font-medium leading-relaxed pl-5">
+                {keySpecs.worldRegion}
+              </p>
+            </li>
+
+            <!-- 4. Battle AI & Difficulty Systems -->
+            <li class="py-3.5">
+              <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1.5 mb-1.5">
+                <span class="flex items-center gap-1.5 text-rose-300 font-mono-spec font-black text-[11px] uppercase tracking-wider">
+                  <span>🧠</span> Battle AI & Difficulty
+                </span>
+                <span class="rounded bg-rose-400/10 px-2 py-0.5 text-rose-300 font-mono-spec font-bold text-[10px] max-w-full leading-tight">
+                  {game.difficulty}
+                </span>
+              </div>
+              <p class="text-slate-300 font-medium leading-relaxed pl-5">
+                {keySpecs.battleAI}
+              </p>
+            </li>
+
+            <!-- 5. Storyline & Narrative Overhaul -->
+            <li class="py-3.5">
+              <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1.5 mb-1.5">
+                <span class="flex items-center gap-1.5 text-amber-300 font-mono-spec font-black text-[11px] uppercase tracking-wider">
+                  <span>📜</span> Storyline & Narrative
+                </span>
+                <span class="rounded bg-amber-400/10 px-2 py-0.5 text-amber-300 font-mono-spec font-bold text-[10px] max-w-full leading-tight">
+                  {game.story}
+                </span>
+              </div>
+              <p class="text-slate-300 font-medium leading-relaxed pl-5">
+                {keySpecs.storyChanges}
+              </p>
+            </li>
+
+            <!-- 6. Quality-of-Life & Systems -->
+            <li class="py-3.5 last:pb-1">
+              <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1.5 mb-1.5">
+                <span class="flex items-center gap-1.5 text-blue-300 font-mono-spec font-black text-[11px] uppercase tracking-wider">
+                  <span>🛠️</span> Quality-of-Life Systems
+                </span>
+                <span class="rounded bg-blue-400/10 px-2 py-0.5 text-blue-300 font-mono-spec font-bold text-[10px] max-w-full leading-tight">
+                  Grind: {game.grind}
+                </span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 pl-5 mt-1">
+                {keySpecs.qolHighlights.map((qol) => (
+                  <span class="rounded border border-blue-400/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-mono-spec text-blue-200">
+                    ✦ {qol}
+                  </span>
+                ))}
+              </div>
+            </li>
+
           </ul>
         </div>
-        <div class="rounded-2xl border border-red-400/20 bg-red-400/5 p-5">
-          <p class="mb-3 text-xs font-black uppercase tracking-[0.28em] text-red-400">Avoid If</p>
-          <ul class="space-y-2">
-            {game.avoidIf.map((item: string) => (
-              <li class="flex items-start gap-2.5 text-sm leading-6 text-slate-300">
-                <span class="mt-0.5 shrink-0 font-black text-red-500">✕</span>{item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════════ -->
-    <!-- TAB: FEATURES                         -->
-    <!-- ══════════════════════════════════════ -->
-    <div id="tab-features" class="tab-panel mt-8 hidden">
-
-      <!-- Tags -->
-      <div class="mb-5 rounded-2xl border border-slate-700/60 bg-slate-950/60 p-6">
-        <p class="mb-4 text-xs font-black uppercase tracking-[0.28em] text-slate-500">Feature Tags</p>
-        <div class="flex flex-wrap gap-2">
-          {game.tags.map((tag: string) => {
-            const icon = tagIcon[tag] ?? "▸";
-            return (
-              <a href={`/library?tag=${encodeURIComponent(tag)}`}
-                 class="flex items-center gap-1.5 rounded-full border border-cyan-400/25 bg-cyan-400/8 px-4 py-2 text-sm font-bold text-cyan-300 transition hover:border-cyan-400/50 hover:bg-cyan-400/14">
-                <span>{icon}</span>{tag}
-              </a>
-            );
-          })}
-        </div>
       </div>
 
-      <!-- Mood -->
-      <div class="mb-5 rounded-2xl border border-slate-700/60 bg-slate-950/60 p-6">
-        <p class="mb-4 text-xs font-black uppercase tracking-[0.28em] text-slate-500">Mood</p>
-        <div class="flex flex-wrap gap-2">
-          {game.mood.map((m: string) => (
-            <a href={`/library?mood=${encodeURIComponent(m)}`}
-               class="rounded-full border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-sm font-bold text-violet-300 transition hover:border-violet-400/50 hover:bg-violet-400/18">
-              {m}
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- 2. DUAL RATING VISUALIZER (GAUGES + RADAR)  -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div class="rounded-3xl border border-white/[0.08] bg-[#161B29] p-6 sm:p-7 flex flex-col justify-between shadow-xl">
+        <div>
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-widest text-cyan-300 font-mono-spec">Metrology & Experience</span>
+              <h2 class="text-xl font-black text-white mt-1">Dual Rating Visualizer</h2>
+            </div>
+            <span class="text-[10px] font-mono-spec text-slate-500">4 Pillars + 6-Stat Radar</span>
+          </div>
+
+          <!-- Top: 4 Circular SVG Ring Gauges -->
+          <div class="mt-4">
+            <h3 class="text-[11px] font-mono-spec font-bold uppercase tracking-wider text-slate-400 mb-2.5">
+              Core Pillars (Ring Gauges)
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {ringScores.map(({ label, score, color }) => {
+                const fill = RING_C * (score / 100);
+                const gap = RING_C - fill;
+                return (
+                  <div class="flex flex-col items-center rounded-2xl border border-white/[0.06] bg-[#111520] py-3 px-2 text-center">
+                    <div class="relative h-14 w-14 sm:h-16 sm:w-16">
+                      <svg viewBox="0 0 80 80" class="h-full w-full -rotate-90">
+                        <circle cx="40" cy="40" r={RING_R} stroke="rgba(255,255,255,0.08)" stroke-width="6" fill="none"/>
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r={RING_R}
+                          stroke={color}
+                          stroke-width="6"
+                          stroke-linecap="round"
+                          stroke-dasharray={`${fill} ${gap}`}
+                          fill="none"
+                          style={`filter: drop-shadow(0 0 6px ${color}88);`}
+                        />
+                      </svg>
+                      <div class="absolute inset-0 flex flex-col items-center justify-center font-mono-spec">
+                        <span class="text-sm font-black text-white">{score}</span>
+                        <span class="text-[7px] text-slate-500">/100</span>
+                      </div>
+                    </div>
+                    <span class="mt-1 text-[11px] font-bold text-slate-300">{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <!-- Below: Pokémon-Styled Hexagon Stat Radar Chart -->
+          <div class="mt-4 flex flex-col items-center rounded-2xl border border-white/[0.06] bg-[#111520] p-4">
+            <div class="w-full flex items-center justify-between pb-2">
+              <span class="text-[11px] font-mono-spec font-bold uppercase tracking-wider text-slate-400">
+                Deep Metrics (Hexagon Radar)
+              </span>
+              <span class="text-[10px] font-mono-spec text-cyan-300 font-bold">Radar 2.0</span>
+            </div>
+
+            <div class="relative my-1 flex justify-center w-full">
+              <svg width="270" height="270" viewBox="0 0 300 300" class="overflow-visible select-none max-w-full">
+                <!-- Concentric Hexagon Background Rings -->
+                {hexLevels.map((pts, i) => (
+                  <polygon
+                    points={pts}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.08)"
+                    stroke-width={i === 3 ? "1.5" : "1"}
+                    stroke-dasharray={i < 3 ? "3 3" : undefined}
+                  />
+                ))}
+
+                <!-- Spoke Axis Lines -->
+                {metrics.map((m) => {
+                  const outer = getRadarPoint(100, m.angle);
+                  return (
+                    <line
+                      x1={CX}
+                      y1={CY}
+                      x2={outer.x}
+                      y2={outer.y}
+                      stroke="rgba(255,255,255,0.12)"
+                      stroke-width="1"
+                    />
+                  );
+                })}
+
+                <!-- 1. Archive Benchmark Average Hexagon (Medium-Sized ~53% in Faint Shade) -->
+                <polygon
+                  points={avgPolygonPoints}
+                  fill="rgba(148, 163, 184, 0.12)"
+                  stroke="rgba(148, 163, 184, 0.45)"
+                  stroke-width="1.5"
+                  stroke-dasharray="4 3"
+                />
+
+                <!-- 2. Game's Actual Stats Polygon (Stacked on Top with Vibrant Glow) -->
+                <polygon
+                  points={statPolygonPoints}
+                  fill="rgba(34, 211, 238, 0.28)"
+                  stroke="#22d3ee"
+                  stroke-width="2.5"
+                  class="radar-game-polygon"
+                  style="filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.4));"
+                />
+
+                <!-- Vertex Dots -->
+                {metrics.map((m) => {
+                  const pt = getRadarPoint(m.val, m.angle);
+                  const isAbove = m.val > m.avg;
+                  return (
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r="4"
+                      fill={isAbove ? "#67e8f9" : "#94a3b8"}
+                      stroke="#090B10"
+                      stroke-width="1.5"
+                    />
+                  );
+                })}
+
+                <!-- Outer Labels -->
+                {metrics.map((m) => {
+                  const labelPos = getRadarPoint(118, m.angle);
+                  const isAbove = m.val > m.avg;
+                  return (
+                    <text
+                      x={labelPos.x}
+                      y={labelPos.y + 3}
+                      text-anchor="middle"
+                      font-size="9"
+                      font-family="JetBrains Mono, monospace"
+                      font-weight="bold"
+                      fill={isAbove ? "#67e8f9" : "#94a3b8"}
+                    >
+                      {m.label} ({m.val})
+                    </text>
+                  );
+                })}
+              </svg>
+            </div>
+
+            <!-- Comparison Legend: Archive Benchmark vs This Game -->
+            <div class="mt-2.5 flex flex-wrap items-center justify-center gap-4 text-[10px] font-mono-spec">
+              <div class="flex items-center gap-1.5 text-slate-400">
+                <span class="inline-block h-2.5 w-3.5 rounded border border-dashed border-slate-400 bg-slate-400/20"></span>
+                <span>Archive Avg (Medium Hexagon ~53)</span>
+              </div>
+              <div class="flex items-center gap-1.5 font-bold text-cyan-300">
+                <span class="inline-block h-2.5 w-3.5 rounded bg-cyan-400 shadow-[0_0_6px_#22d3ee]"></span>
+                <span>{game.name} Profile</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- "CHOOSE IF / AVOID IF" SPLIT CARD           -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="mt-8 grid gap-6 md:grid-cols-2" data-reveal>
+      
+      <!-- Target Archetypes (Choose If) -->
+      <div class="rounded-3xl border border-emerald-400/20 bg-emerald-500/[0.04] p-6 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="grid h-6 w-6 place-items-center rounded-full bg-emerald-400/20 text-emerald-300 font-black text-sm">✓</span>
+            <h3 class="text-sm font-black uppercase tracking-wider text-emerald-300 font-mono-spec">
+              Choose If (Target Players)
+            </h3>
+          </div>
+          <span class="text-[10px] font-mono-spec uppercase text-emerald-400/70 font-bold">Recommended For</span>
+        </div>
+        <ul class="space-y-3 text-xs leading-relaxed text-slate-300">
+          {game.bestFor.map((item) => (
+            <li class="flex items-start gap-2.5">
+              <span class="text-emerald-400 shrink-0 font-bold text-sm leading-none mt-0.5">✦</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <!-- Dealbreakers (Avoid If) -->
+      <div class="rounded-3xl border border-rose-400/20 bg-rose-500/[0.04] p-6 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="grid h-6 w-6 place-items-center rounded-full bg-rose-400/20 text-rose-300 font-black text-sm">✕</span>
+            <h3 class="text-sm font-black uppercase tracking-wider text-rose-300 font-mono-spec">
+              Avoid If (Dealbreakers & Warnings)
+            </h3>
+          </div>
+          <span class="text-[10px] font-mono-spec uppercase text-rose-400/70 font-bold">Dealbreakers</span>
+        </div>
+        <ul class="space-y-3 text-xs leading-relaxed text-slate-300">
+          {game.avoidIf.map((item) => (
+            <li class="flex items-start gap-2.5">
+              <span class="text-rose-400 shrink-0 font-bold text-sm leading-none mt-0.5">✕</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- FLAT TAG PILLS (EXCLUSIONS RESPECTED)       -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="mt-8 rounded-3xl border border-white/[0.08] bg-[#161B29] p-6" data-reveal>
+      <div class="pb-3 border-b border-white/[0.08]">
+        <h3 class="text-xs font-mono-spec font-bold uppercase tracking-wider text-slate-400">
+          Flat Mechanics & Feature Tags
+        </h3>
+        <p class="text-[11px] text-slate-500 mt-0.5">Click any tag to search matching projects across the archive.</p>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        {game.tags.map((tag) => (
+          <a
+            href={`/library?tag=${encodeURIComponent(tag)}`}
+            class="rounded-full border border-white/[0.1] bg-[#111520] px-3.5 py-1.5 text-xs font-mono-spec font-bold text-slate-300 transition hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:text-cyan-200"
+          >
+            #{tag}
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- PATCH & COMPATIBILITY CARD                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="mt-8 rounded-3xl border border-white/[0.08] bg-[#161B29] p-6 sm:p-8" data-reveal>
+      <div class="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+        <div>
+          <span class="text-[10px] font-black uppercase tracking-widest text-emerald-400 font-mono-spec">Preservation & Hardware</span>
+          <h2 class="text-xl font-black text-white mt-1">Patch & Hardware Compatibility</h2>
+        </div>
+        <span class="rounded bg-emerald-400/10 px-2 py-0.5 text-[10px] font-mono-spec font-bold text-emerald-300">
+          Clean ROM Safe
+        </span>
+      </div>
+
+      <div class="mt-6 grid gap-6 md:grid-cols-2">
+        
+        <!-- Clean Base Requirements -->
+        <div class="space-y-3 font-mono-spec text-xs">
+          <div class="rounded-2xl border border-white/[0.06] bg-[#111520] p-4">
+            <span class="text-slate-500 uppercase text-[10px] font-bold block mb-1">Required Clean Base ROM:</span>
+            <div class="text-slate-200 font-bold break-words">{cleanBaseRom}</div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-2xl border border-white/[0.06] bg-[#111520] p-4">
+              <span class="text-slate-500 uppercase text-[10px] font-bold block mb-1">Patch Format:</span>
+              <div class="text-cyan-300 font-bold">{patchFormat}</div>
+            </div>
+            <div class="rounded-2xl border border-white/[0.06] bg-[#111520] p-4">
+              <span class="text-slate-500 uppercase text-[10px] font-bold block mb-1">Source Safety:</span>
+              <div class="text-emerald-300 font-bold">{game.sourceStatus}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Emulator Verification Grid -->
+        <div class="rounded-2xl border border-white/[0.06] bg-[#111520] p-4 space-y-2 font-mono-spec text-xs">
+          <span class="text-slate-500 uppercase text-[10px] font-bold block mb-2">Verified Emulator Environments:</span>
+          
+          <div class="flex items-center justify-between border-b border-white/[0.04] pb-2">
+            <span class="text-slate-300">mGBA / Gambatte:</span>
+            <span class="font-bold text-emerald-400">{compat.mgba}</span>
+          </div>
+
+          <div class="flex items-center justify-between border-b border-white/[0.04] pb-2">
+            <span class="text-slate-300">Delta Emulator (iOS):</span>
+            <span class="font-bold text-cyan-300">{compat.delta}</span>
+          </div>
+
+          <div class="flex items-center justify-between border-b border-white/[0.04] pb-2">
+            <span class="text-slate-300">RetroArch Multisystem:</span>
+            <span class="font-bold text-slate-200">{compat.retroarch}</span>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-slate-300">Real Hardware / Flashcart:</span>
+            <span class="font-bold text-amber-300">{compat.flashcart}</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Interactive Client-Side Base ROM Hash Verifier -->
+      <div id="rom-verifier-box" data-base={game.base} class="mt-6 rounded-2xl border border-dashed border-white/[0.14] bg-[#111520]/80 p-5 transition hover:border-cyan-400/50">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-500/10 text-cyan-300 text-lg border border-cyan-400/20">
+              ⚡
+            </span>
+            <div>
+              <h4 class="text-xs font-mono-spec font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <span>Clean Base ROM Verifier</span>
+                <span class="rounded bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300 font-normal">100% Client-Side Privacy</span>
+              </h4>
+              <p class="text-[11px] text-slate-400 mt-0.5">
+                Drop your local clean base ROM here to verify SHA-1 checksum match before patching. Zero uploads.
+              </p>
+            </div>
+          </div>
+
+          <label class="cursor-pointer shrink-0 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-mono-spec font-bold text-cyan-300 transition hover:bg-cyan-500/20 active:scale-95 text-center">
+            <span>Choose ROM File</span>
+            <input type="file" id="rom-file-input" accept=".gba,.gbc,.gb,.nds,.zip" class="hidden" />
+          </label>
+        </div>
+
+        <div id="rom-verify-output" class="hidden mt-4 pt-3 border-t border-white/[0.08] text-xs font-mono-spec"></div>
+      </div>
+
+      <div class="mt-4 rounded-xl bg-black/40 p-3 text-[11px] font-mono-spec text-slate-400">
+        🛡️ <strong class="text-slate-300">Preservation Notice:</strong> ArchiveDex only archives patch links and documentation hashes. Users must supply their own legally obtained clean base ROMs.
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- LINEAGE CHAIN VISUAL NODE GRAPH (GENUINE)   -->
+    <!-- ═══════════════════════════════════════════ -->
+    {hasActualLineage && lineage && (
+      <section class="mt-8 rounded-3xl border border-white/[0.08] bg-[#161B29] p-6 sm:p-8" data-reveal>
+        <div class="pb-4 border-b border-white/[0.08]">
+          <span class="text-[10px] font-black uppercase tracking-widest text-violet-400 font-mono-spec">Official Lineage</span>
+          <h2 class="text-xl font-black text-white mt-1">Project Lineage Chain</h2>
+          <p class="text-xs text-slate-500 mt-1">Direct prequels, sequels, balance overhauls, and canonical universe relatives.</p>
+        </div>
+
+        <div class="mt-6 flex flex-wrap items-center justify-center gap-4 py-4">
+          <!-- Prequels -->
+          {lineage.prequels && lineage.prequels.map((p) => (
+            <a href={`/games/${p.id}`} class="rounded-2xl border border-white/[0.1] bg-[#111520] p-4 text-center transition hover:border-violet-400 group">
+              <span class="text-[10px] font-mono-spec text-violet-400 uppercase block mb-1 font-bold">◀ Prequel</span>
+              <span class="text-xs font-bold text-slate-200 group-hover:text-violet-300">{p.name}</span>
+            </a>
+          ))}
+
+          {lineage.prequels && lineage.prequels.length > 0 && (
+            <span class="text-slate-500 font-mono-spec text-lg">⟶</span>
+          )}
+
+          <!-- Current Game Active Node -->
+          <div class="rounded-2xl border-2 border-cyan-400 bg-cyan-500/10 p-5 text-center shadow-[0_0_20px_rgba(34,211,238,0.25)]">
+            <span class="text-[10px] font-mono-spec text-cyan-300 uppercase font-black block mb-1">Current Record</span>
+            <span class="text-sm font-black text-white">{game.name}</span>
+          </div>
+
+          {((lineage.variants && lineage.variants.length > 0) || (lineage.sequels && lineage.sequels.length > 0) || (lineage.sharedUniverse && lineage.sharedUniverse.length > 0)) && (
+            <span class="text-slate-500 font-mono-spec text-lg">⟶</span>
+          )}
+
+          <!-- Variants -->
+          {lineage.variants && lineage.variants.map((v) => (
+            <a href={`/games/${v.id}`} class="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-center transition hover:border-amber-400 group">
+              <span class="text-[10px] font-mono-spec text-amber-300 uppercase block mb-1 font-bold">⇄ Revision / Variant</span>
+              <span class="text-xs font-bold text-slate-200 group-hover:text-amber-200">{v.name}</span>
+            </a>
+          ))}
+
+          <!-- Sequels -->
+          {lineage.sequels && lineage.sequels.map((s) => (
+            <a href={`/games/${s.id}`} class="rounded-2xl border border-white/[0.1] bg-[#111520] p-4 text-center transition hover:border-cyan-400 group">
+              <span class="text-[10px] font-mono-spec text-cyan-300 uppercase block mb-1 font-bold">Sequel ▶</span>
+              <span class="text-xs font-bold text-slate-200 group-hover:text-cyan-200">{s.name}</span>
+            </a>
+          ))}
+
+          <!-- Shared Universe -->
+          {lineage.sharedUniverse && lineage.sharedUniverse.map((u) => (
+            <a href={`/games/${u.id}`} class="rounded-2xl border border-purple-500/30 bg-purple-500/10 p-4 text-center transition hover:border-purple-400 group">
+              <span class="text-[10px] font-mono-spec text-purple-300 uppercase block mb-1 font-bold">✦ Shared Universe</span>
+              <span class="text-xs font-bold text-slate-200 group-hover:text-purple-200">{u.name}</span>
             </a>
           ))}
         </div>
+      </section>
+    )}
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- CURATED RECOMMENDATIONS & DISCOVERY         -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="mt-12 pt-8 border-t border-white/[0.08]" data-reveal>
+      
+      <!-- Header + Interactive Recommendation Tabs -->
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between pb-6">
+        <div>
+          <span class="text-[10px] font-mono-spec font-bold uppercase tracking-wider text-cyan-400">Archive Recommendations</span>
+          <h2 class="text-2xl font-black text-white mt-1">If You Liked {game.name}</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Explore by matching gameplay formula, shared battle mechanics & tags, or creator portfolio.</p>
+        </div>
+
+        <!-- 3 Interactive Filter Tabs -->
+        <div class="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/[0.08] bg-[#111520] p-1 font-mono-spec self-start lg:self-auto">
+          <button
+            id="rec-tab-similar"
+            class="rec-tab-btn active-rec-tab flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition"
+            data-target="rec-panel-similar"
+          >
+            <span>🎮</span>
+            <span>Similar Vibe</span>
+            <span class="rounded-full bg-cyan-400/20 px-1.5 py-0.2 text-[10px] font-bold text-cyan-300">{similarGames.length}</span>
+          </button>
+          
+          <button
+            id="rec-tab-tags"
+            class="rec-tab-btn flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-slate-400 transition hover:text-white"
+            data-target="rec-panel-tags"
+          >
+            <span>🏷️</span>
+            <span>Shared Tags</span>
+            <span class="rounded-full bg-white/10 px-1.5 py-0.2 text-[10px] font-bold text-slate-300">{tagGames.length}</span>
+          </button>
+
+          <button
+            id="rec-tab-creator"
+            class="rec-tab-btn flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-slate-400 transition hover:text-white"
+            data-target="rec-panel-creator"
+          >
+            <span>👤</span>
+            <span class="truncate max-w-[130px]">{game.creator && game.creator !== "Community" ? `By ${game.creator}` : 'More from Creator'}</span>
+            <span class="rounded-full bg-white/10 px-1.5 py-0.2 text-[10px] font-bold text-slate-300">
+              {creatorGames.length > 0 ? creatorGames.length : fallbackCreatorGames.length}
+            </span>
+          </button>
+        </div>
       </div>
 
-      <!-- Quick facts grid -->
-      <div class="rounded-2xl border border-slate-700/60 bg-slate-950/60 p-6">
-        <p class="mb-4 text-xs font-black uppercase tracking-[0.28em] text-slate-500">Quick Facts</p>
-        <dl class="grid gap-3 sm:grid-cols-2">
-          {[
-            { label:"Creator",    value: game.creator    },
-            { label:"Runtime",    value: game.runtime    },
-            { label:"Base Game",  value: game.base       },
-            { label:"Length",     value: game.length     },
-            { label:"Difficulty", value: game.difficulty },
-            { label:"Grinding",   value: game.grind      },
-            { label:"Story",      value: game.story      },
-            { label:"Dex Style",  value: game.dex        },
-          ].map(({ label, value }) => (
-            <div class="flex items-center justify-between rounded-xl border border-slate-800/80 bg-slate-900/50 px-4 py-2.5">
-              <dt class="text-xs text-slate-500">{label}</dt>
-              <dd class="text-sm font-bold text-slate-200">{value}</dd>
-            </div>
+      <!-- Panel 1: Similar Gameplay / Formula -->
+      <div id="rec-panel-similar" class="rec-panel space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-mono-spec text-slate-400 bg-[#161B29]/60 px-4 py-2.5 rounded-xl border border-white/[0.04]">
+          <div class="flex items-center gap-2">
+            <span class="text-cyan-400">ℹ</span>
+            <span>Filtered by <strong class="text-slate-200">{game.category}</strong> formula, <strong class="text-slate-200">{game.runtime}</strong> platform, and comparable difficulty.</span>
+          </div>
+          <a href={`/library?category=${encodeURIComponent(game.category)}`} class="text-cyan-300 hover:underline">Explore Category ({game.category}) →</a>
+        </div>
+        
+        <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          {similarGames.map((rel) => (
+            <GameCard game={rel} layout="grid" />
           ))}
-        </dl>
+        </div>
       </div>
-    </div>
 
-    <!-- ══════════════════════════════════════ -->
-    <!-- TAB: SOURCE NOTES                     -->
-    <!-- ══════════════════════════════════════ -->
-    <div id="tab-source-notes" class="tab-panel mt-8 hidden">
-      <div class="rounded-2xl border border-slate-700/60 bg-slate-950/60 p-7">
-        <p class="mb-6 text-xs font-black uppercase tracking-[0.28em] text-slate-500">Source Information</p>
-
-        <!-- Trust level badge -->
-        <div class="mb-5 flex items-center gap-3">
-          <span class="text-sm text-slate-500">Source Status:</span>
-          <span class={`rounded-full border px-3 py-1 text-sm font-black ${
-            game.sourceStatus.includes("Safe")    ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" :
-            game.sourceStatus.includes("Caution") ? "border-yellow-400/30 bg-yellow-400/10 text-yellow-300"   :
-            game.sourceStatus.includes("Scan")    ? "border-orange-400/30 bg-orange-400/10 text-orange-300"   :
-                                                    "border-slate-700 bg-slate-900 text-slate-400"
-          }`}>
-            {game.sourceStatus.includes("Safe")    ? "✅ " : game.sourceStatus.includes("Caution") ? "⚠️ " : game.sourceStatus.includes("Scan") ? "🔍 " : ""}
-            {game.sourceStatus}
-          </span>
+      <!-- Panel 2: Shared Tags & Core Mechanics -->
+      <div id="rec-panel-tags" class="rec-panel hidden space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 text-xs font-mono-spec bg-[#161B29]/60 p-3.5 rounded-xl border border-white/[0.04]">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-slate-400 font-bold">Matching Mechanics:</span>
+            {game.tags.slice(0, 6).map((tag) => (
+              <a href={`/library?tag=${encodeURIComponent(tag)}`} class="rounded-lg border border-white/10 bg-black/40 px-2 py-0.5 text-[11px] font-bold text-cyan-300 hover:border-cyan-400/50">
+                #{tag}
+              </a>
+            ))}
+          </div>
+          <span class="text-[11px] text-slate-500">Sorted by highest mechanic match overlap</span>
         </div>
 
-        <!-- Linux compat -->
-        <div class="mb-5 flex items-center gap-3">
-          <span class="text-sm text-slate-500">Linux Compat:</span>
-          <span class={`rounded-full border px-3 py-1 text-sm font-black ${linuxCompatColor.border} ${linuxCompatColor.bg} ${linuxCompatColor.text}`}>
-            {game.linuxCompat === "mGBA Ready" ? "🐧 mGBA Ready" : game.linuxCompat === "Wine / Proton" ? "🍷 Wine / Proton" : game.linuxCompat}
-          </span>
+        <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          {tagGames.map((rel) => (
+            <GameCard game={rel} layout="grid" />
+          ))}
         </div>
+      </div>
 
-        <!-- Official source link -->
-        {game.officialSource ? (
-          <a href={game.officialSource} target="_blank" rel="noopener noreferrer"
-             class="mt-4 flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 py-3.5 text-sm font-black text-emerald-300 transition hover:border-emerald-400/50 hover:bg-emerald-400/15">
-            ↗ Visit Official Source
-          </a>
+      <!-- Panel 3: More from Creator / Portfolio -->
+      <div id="rec-panel-creator" class="rec-panel hidden space-y-4">
+        {creatorGames.length > 0 ? (
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-mono-spec text-slate-400 bg-[#161B29]/60 px-4 py-2.5 rounded-xl border border-white/[0.04] mb-4">
+              <span>Creator Portfolio: Projects authored or updated by <strong class="text-white">{game.creator}</strong>.</span>
+              <a href={`/library?q=${encodeURIComponent(game.creator)}`} class="text-cyan-300 hover:underline">Search Creator in Library →</a>
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+              {creatorGames.map((rel) => (
+                <GameCard game={rel} layout="grid" />
+              ))}
+            </div>
+          </div>
         ) : (
-          <div class="mt-4 rounded-2xl border border-slate-700/60 bg-slate-900/60 py-3.5 text-center text-sm text-slate-600">
-            No official source listed
+          <div>
+            <div class="rounded-2xl border border-white/[0.08] bg-[#161B29]/70 p-5 text-center mb-4">
+              <span class="text-2xl block mb-2">⭐</span>
+              <div class="text-sm font-bold text-white">Standalone Creator Release</div>
+              <p class="text-xs text-slate-400 mt-1 max-w-lg mx-auto">
+                <strong class="text-slate-200">{game.name}</strong> is currently the primary preservation milestone by <strong class="text-cyan-300">{game.creator || "Community"}</strong> in our archive. Here are top-rated gems from the same <strong>{game.runtime}</strong> system:
+              </p>
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+              {fallbackCreatorGames.map((rel) => (
+                <GameCard game={rel} layout="grid" />
+              ))}
+            </div>
           </div>
         )}
-
-        <p class="mt-5 text-xs leading-5 text-slate-600">
-          ArchiveDex does not host ROMs or prepatched files. Always download from official community sources.
-          Check <a href="/source-notes" class="text-cyan-400 hover:text-cyan-300">Source Notes</a> for full trust level definitions.
-        </p>
       </div>
-    </div>
 
-    <!-- ══════════════════════════════════════ -->
-    <!-- TAB: SIMILAR                          -->
-    <!-- ══════════════════════════════════════ -->
-    <div id="tab-similar" class="tab-panel mt-8 hidden">
-      {related.length > 0 ? (
-        <div class="grid gap-4 md:grid-cols-3">
-          {related.map(entry => <GameCard game={entry} />)}
-        </div>
-      ) : (
-        <div class="rounded-2xl border border-slate-700/60 bg-slate-950/60 p-12 text-center">
-          <div class="mb-3 text-4xl opacity-20">◈</div>
-          <p class="text-lg font-black text-white">No similar entries found</p>
-          <a href="/library" class="mt-4 inline-block text-sm font-black text-cyan-300 hover:text-cyan-200">Browse the full library →</a>
-        </div>
-      )}
-    </div>
+    </section>
 
   </main>
 </BaseLayout>
 
-<style>
-  .tab-btn.active { color: #f8fafc; }
-</style>
-
 <script>
-  function initDetailPage() {
-    // Guard: this listener is bound once to `document` via astro:page-load
-    // (see bottom of this script) and, once bound, fires on every future
-    // navigation site-wide — not just re-visits to a detail page. Without
-    // this check, ".tab-btn"/".tab-panel"/".spotlight-active" below (class
-    // names also used by library.astro's tag/mood tabs and index.astro's
-    // hero panel) would match on OTHER pages too, adding duplicate/incorrect
-    // listeners there. Bail out immediately unless we're actually on a game
-    // detail page.
-    if (!document.getElementById("add-to-compare")) return;
+  function initStickySubheader() {
+    const subheader = document.getElementById("sticky-record-bar");
+    const trigger = document.getElementById("record-hero-trigger");
+    if (!subheader || !trigger) return;
 
-    // ── Tab switcher with sliding indicator ──────────────────
-    const tabBtns    = Array.from(document.querySelectorAll<HTMLButtonElement>(".tab-btn"));
-    const tabPanels  = Array.from(document.querySelectorAll<HTMLElement>(".tab-panel"));
-    const indicator  = document.getElementById("tab-indicator");
+    const scrollTarget = document.getElementById("main-scroll-container") || window;
 
-    function moveIndicator(btn: HTMLButtonElement) {
-      if (!indicator) return;
-      indicator.style.width     = `${btn.offsetWidth}px`;
-      indicator.style.transform = `translateX(${btn.offsetLeft}px)`;
+    function handleScroll() {
+      const rect = trigger.getBoundingClientRect();
+      const show = rect.bottom < 80;
+      subheader.classList.toggle("hidden", !show);
     }
 
-    function activateTab(tabId: string, opts: { instant?: boolean } = {}) {
-      const activeBtn = tabBtns.find(b => b.dataset.tab === tabId);
-      tabBtns.forEach(btn => btn.classList.toggle("active", btn === activeBtn));
-      tabPanels.forEach(panel => {
-        const match = panel.id === `tab-${tabId}`;
-        const wasHidden = panel.classList.contains("hidden");
-        panel.classList.toggle("hidden", !match);
-        if (match && wasHidden) {
-          // Retrigger the entrance animation every time a hidden panel opens
-          panel.classList.remove("tab-panel-enter");
-          void panel.offsetWidth; // force reflow to restart the keyframe
-          panel.classList.add("tab-panel-enter");
-        }
+    scrollTarget.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
+  }
+
+  function initRecommendationTabs() {
+    const tabs = document.querySelectorAll<HTMLButtonElement>(".rec-tab-btn");
+    const panels = document.querySelectorAll<HTMLElement>(".rec-panel");
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const targetId = tab.dataset.target;
+        if (!targetId) return;
+
+        tabs.forEach((t) => {
+          t.classList.remove("active-rec-tab");
+          t.classList.add("text-slate-400");
+        });
+
+        tab.classList.add("active-rec-tab");
+        tab.classList.remove("text-slate-400");
+
+        panels.forEach((p) => {
+          if (p.id === targetId) {
+            p.classList.remove("hidden");
+          } else {
+            p.classList.add("hidden");
+          }
+        });
       });
-      if (activeBtn) {
-        if (opts.instant && indicator) indicator.style.transition = "none";
-        moveIndicator(activeBtn);
-        if (opts.instant && indicator) requestAnimationFrame(() => { indicator.style.transition = ""; });
-      }
-    }
-
-    tabBtns.forEach(btn => {
-      btn.addEventListener("click", () => activateTab(btn.dataset.tab!));
-    });
-
-    // Activate first tab on load — instant indicator placement, no slide-in from 0
-    activateTab("overview", { instant: true });
-
-    // Keep indicator aligned on resize (tab widths can reflow)
-    window.addEventListener("resize", () => {
-      const active = tabBtns.find(b => b.classList.contains("active"));
-      if (active) moveIndicator(active);
-    });
-
-    // ── Compare button ────────────────────────────────────────
-    const compareBtn = document.getElementById("add-to-compare");
-    compareBtn?.addEventListener("click", () => {
-      const id = (compareBtn as HTMLButtonElement).dataset.gameId;
-      if (!id) return;
-      let existing: string[] = [];
-      try { existing = JSON.parse(sessionStorage.getItem("archivedex_compare") ?? "[]"); } catch {}
-      if (!existing.includes(id)) existing.push(id);
-      existing = existing.slice(0, 3);
-      sessionStorage.setItem("archivedex_compare", JSON.stringify(existing));
-      window.location.href = `/compare?games=${existing.join(",")}`;
-    });
-
-    // ── Cursor spotlight on hero ───────────────────────────────
-    const hero = document.querySelector<HTMLElement>(".spotlight-active");
-    hero?.addEventListener("mousemove", (e) => {
-      const rect = hero.getBoundingClientRect();
-      hero.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-      hero.style.setProperty("--my", `${e.clientY - rect.top}px`);
     });
   }
 
-  document.addEventListener("astro:page-load", initDetailPage);
+  function initRomHashVerifier() {
+    const box = document.getElementById("rom-verifier-box");
+    const input = document.getElementById("rom-file-input") as HTMLInputElement;
+    const output = document.getElementById("rom-verify-output");
+    if (!box || !input || !output) return;
+
+    const baseGame = (box.dataset.base || "").toLowerCase();
+
+    async function handleFile(file: File) {
+      if (!file) return;
+      output.classList.remove("hidden");
+      output.innerHTML = `
+        <div class="flex items-center gap-2 text-slate-400 animate-pulse py-1">
+          <span>⏳</span> Computing SHA-1 checksum for <strong>${file.name}</strong> (${(file.size / (1024 * 1024)).toFixed(2)} MB)…
+        </div>
+      `;
+
+      try {
+        const buffer = await file.arrayBuffer();
+        const hashBuf = await crypto.subtle.digest("SHA-1", buffer);
+        const hashArr = Array.from(new Uint8Array(hashBuf));
+        const hashHex = hashArr.map((b) => b.toString(16).padStart(2, "0")).join("");
+
+        const KNOWN: Record<string, { name: string; sha1: string }> = {
+          "firered": { name: "1636 - Pokémon FireRed (USA) v1.0", sha1: "41cb23d8dccc8ebd7ea649cd8daac582d6e174c4" },
+          "emerald": { name: "1986 - Pokémon Emerald (USA)", sha1: "f3ae088181bf583e55daf962a92bb46f4f1d07b7" },
+          "ruby": { name: "0907 - Pokémon Ruby (USA)", sha1: "f56b0253459c2c62c2409f6e14a51ebcf40d99c7" },
+          "crystal": { name: "Pokémon Crystal (USA/Europe)", sha1: "f4cd194b3f2d586370bbbaaa97210b4279c6d480" },
+          "red": { name: "Pokémon Red (USA/Europe)", sha1: "ea9bcae617fdf159b045185467ae58b2e4a48b9a" },
+          "platinum": { name: "3541 - Pokémon Platinum (USA)", sha1: "6a24177242ba4e12e1ffb15beaa067ff2c219666" },
+          "heartgold": { name: "4788 - Pokémon HeartGold (USA)", sha1: "3c09b840003b51b3ce99180fce3ee72465eb19d4" },
+          "black 2": { name: "6149 - Pokémon Black Version 2 (USA)", sha1: "5b184fc04d80980fa2a884da59d9c286e685f4c5" }
+        };
+
+        const isV11 = hashHex === "dd346299b9cf2a567675e810ebc281df6f50b4d4";
+        const expected = Object.entries(KNOWN).find(([k]) => baseGame.includes(k))?.[1];
+
+        if (expected && expected.sha1 === hashHex) {
+          output.innerHTML = `
+            <div class="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-emerald-300">
+              <div class="flex items-center gap-2 font-black">
+                <span>✓</span> MATCH VERIFIED: Perfect Clean Base ROM
+              </div>
+              <div class="mt-1 text-[11px] text-slate-300">
+                Matches <strong>${expected.name}</strong>. Safe to apply official creator patch files (.ups / .bps).
+              </div>
+              <div class="mt-1.5 text-[10px] font-mono text-emerald-400/80">SHA-1: ${hashHex}</div>
+            </div>
+          `;
+        } else if (isV11) {
+          output.innerHTML = `
+            <div class="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-amber-300">
+              <div class="flex items-center gap-2 font-black">
+                <span>⚠️</span> REVISION WARNING: FireRed v1.1 Detected
+              </div>
+              <div class="mt-1 text-[11px] text-slate-300">
+                You provided FireRed Rev 1 (v1.1). Almost all GBA ROM hacks require <strong>1636 - FireRed v1.0</strong> to avoid graphical glitches and freeze bugs.
+              </div>
+              <div class="mt-1.5 text-[10px] font-mono text-amber-400/80">SHA-1: ${hashHex}</div>
+            </div>
+          `;
+        } else {
+          output.innerHTML = `
+            <div class="rounded-xl border border-white/[0.1] bg-[#161B29] p-3 text-slate-300">
+              <div class="font-bold text-white flex items-center justify-between">
+                <span>Checksum Computed:</span>
+                <span class="text-cyan-300 font-mono">${(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+              </div>
+              <div class="mt-1 text-[11px] font-mono break-all text-slate-400">SHA-1: <span class="text-cyan-200">${hashHex}</span></div>
+              ${expected ? `<div class="mt-1.5 text-[10px] text-slate-500">Expected for ${expected.name}: <span class="font-mono text-slate-400">${expected.sha1}</span></div>` : ""}
+            </div>
+          `;
+        }
+      } catch (err: any) {
+        output.innerHTML = `<div class="text-red-400">Error reading file: ${err.message}</div>`;
+      }
+    }
+
+    input.addEventListener("change", () => {
+      if (input.files && input.files[0]) handleFile(input.files[0]);
+    });
+
+    box.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      box.classList.add("border-cyan-400", "bg-cyan-500/[0.05]");
+    });
+    box.addEventListener("dragleave", () => {
+      box.classList.remove("border-cyan-400", "bg-cyan-500/[0.05]");
+    });
+    box.addEventListener("drop", (e) => {
+      e.preventDefault();
+      box.classList.remove("border-cyan-400", "bg-cyan-500/[0.05]");
+      if (e.dataTransfer && e.dataTransfer.files[0]) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+  }
+
+  function initGameRecord() {
+    initStickySubheader();
+    initRecommendationTabs();
+    initRomHashVerifier();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initGameRecord);
+  } else {
+    initGameRecord();
+  }
+  document.addEventListener("astro:page-load", initGameRecord);
 </script>

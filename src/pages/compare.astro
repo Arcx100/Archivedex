@@ -2,379 +2,603 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 ---
 
-<BaseLayout title="Compare · ArchiveDex" description="Compare Pokémon fan games side by side.">
-  <main class="mx-auto max-w-7xl px-6 py-12">
+<BaseLayout title="Compare Games · ArchiveDex" description="Compare Pokémon fan games and ROM hacks side-by-side across mechanics, ratings, difficulty, and playtime.">
+  <main class="mx-auto max-w-[1500px] px-6 py-10">
 
-    <a href="/library" class="text-sm font-black text-cyan-300 transition hover:text-cyan-200">← Back to library</a>
+    <div class="mb-4">
+      <a href="/library" class="text-xs font-mono-spec font-bold text-cyan-400 hover:underline">← Back to Library</a>
+    </div>
 
-    <header class="mb-10 mt-6" data-reveal>
-      <p class="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">Side by side</p>
-      <h1 class="mt-3 text-5xl font-black text-white">Compare games</h1>
-      <p class="mt-3 max-w-2xl text-slate-400">Pick up to 3 games to compare stats, tags, and mood at a glance.</p>
+    <!-- Header -->
+    <header class="mb-8" data-reveal>
+      <div class="flex items-center gap-2">
+        <span class="rounded-md border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-mono-spec font-black uppercase tracking-widest text-cyan-300">
+          Metrology Matrix
+        </span>
+        <span class="text-xs font-mono-spec text-slate-500">Up to 4 Projects Side-by-Side</span>
+      </div>
+      <h1 class="mt-2 text-4xl sm:text-5xl font-black text-white">Compare Projects</h1>
+      <p class="mt-2 text-xs text-slate-400 max-w-2xl font-mono-spec">
+        Select up to 4 Pokémon games to analyze mechanics, difficulty pips, clean base ROMs, and unique features side by side.
+      </p>
     </header>
 
-    <!-- Game picker -->
-    <section class="glass-panel relative mb-8 overflow-hidden rounded-[1.75rem] p-6" data-reveal style="--reveal-delay:60ms">
-      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(34,211,238,0.12),transparent_50%)]"></div>
+    <!-- Project Picker Card -->
+    <section class="glass-panel mb-8 rounded-2xl p-5" data-reveal style="--reveal-delay:50ms">
       <div class="relative">
-        <p class="mb-4 text-xs font-black uppercase tracking-[0.25em] text-slate-500">Add games to compare</p>
+        <label class="block text-xs font-mono-spec font-bold uppercase tracking-wider text-slate-400 mb-2">
+          Search & Add Game to Comparison (Max 4):
+        </label>
         <div class="relative">
-          <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">🔍</span>
+          <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
           <input
-            id="picker-search"
-            placeholder="Search by name, type, tag…"
-            autocomplete="off"
-            class="w-full rounded-2xl border border-slate-700 bg-slate-950 py-3 pl-10 pr-4 text-slate-100 outline-none transition focus:border-cyan-400 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.12)]"
+            id="compare-search-input"
+            type="text"
+            placeholder="Type project name to add (e.g. Unbound, Emerald Rogue, Seaglass, Prism)…"
+            class="w-full rounded-xl border border-white/[0.08] bg-[#111520] py-2.5 pl-10 pr-4 text-xs font-medium text-white placeholder-slate-500 outline-none transition focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(34,211,238,0.2)]"
           />
-          <div id="picker-results" class="absolute left-0 right-0 top-full z-50 mt-2 hidden overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"></div>
+          <div id="compare-search-dropdown" class="absolute left-0 right-0 top-full mt-2 hidden z-50 rounded-xl border border-white/[0.12] bg-[#161B29] p-2 shadow-2xl space-y-1 max-h-60 overflow-y-auto">
+          </div>
         </div>
 
-        <!-- Selected chips -->
-        <div id="selected-chips" class="mt-4 flex flex-wrap gap-3"></div>
+        <!-- Selected Game Chips -->
+        <div id="compare-chips-row" class="mt-4 flex flex-wrap gap-2"></div>
       </div>
     </section>
 
-    <!-- Empty state -->
-    <div id="empty-compare" class="rounded-[1.75rem] border border-slate-700/60 bg-slate-950/70 p-16 text-center">
-      <div class="mb-4 text-6xl opacity-20 select-none">⊕</div>
-      <p class="text-2xl font-black text-white">No games selected yet</p>
-      <p class="mt-2 text-slate-500">
-        Search above, or go to the
-        <a href="/library" class="font-bold text-cyan-300 hover:text-cyan-200">Library</a>
-        and use the ⊕ buttons on cards.
-      </p>
+    <!-- Empty State -->
+    <div id="compare-empty" class="rounded-3xl border border-white/[0.08] bg-[#161B29] p-16 text-center">
+      <div class="text-5xl opacity-30 mb-3">⇄</div>
+      <h3 class="text-xl font-black text-white">No games added to comparison yet</h3>
+      <p class="mt-1 text-xs text-slate-400 font-mono-spec">Search above or click the ⇄ button on any game card in the Library.</p>
+      <a href="/library" class="mt-4 inline-block rounded-xl bg-cyan-400 px-5 py-2 text-xs font-black text-slate-950 hover:bg-cyan-300">
+        Browse Library →
+      </a>
     </div>
 
-    <!-- Comparison table (built by JS) -->
-    <div id="compare-output" class="hidden"></div>
+    <!-- Comparison Table Output Area -->
+    <div id="compare-table-container" class="hidden space-y-6">
+      <!-- Built dynamically via client JavaScript -->
+    </div>
 
   </main>
 </BaseLayout>
 
 <script>
-  type CompareGame = {
-    id: string; name: string; type: string; base: string; runtime: string;
-    status: string; category: string; rating: number; length: string;
-    difficulty: string; grind: string; story: string; dex: string;
-    sourceStatus: string; tags: string[]; mood: string[]; description: string;
+  type LibGame = {
+    id: string;
+    name: string;
+    runtime: string;
+    base: string;
+    rating: number;
+    status: string;
+    category: string;
+    length: string;
+    difficulty: string;
+    pips: number;
+    playtime: string;
+    description: string;
     creator: string;
+    tags: string[];
+    mood: string[];
+    stats?: {
+      difficulty: number;
+      exploration: number;
+      grinding: number;
+      qol: number;
+      balance: number;
+      music: number;
+    };
   };
 
-  async function initComparePage() {
-    const pickerSearch  = document.getElementById("picker-search") as HTMLInputElement;
-    if (!pickerSearch) return; // not on compare page
+  async function initCompare() {
+    const input = document.getElementById("compare-search-input") as HTMLInputElement;
+    const dropdown = document.getElementById("compare-search-dropdown");
+    const chipsRow = document.getElementById("compare-chips-row");
+    const emptyState = document.getElementById("compare-empty");
+    const tableContainer = document.getElementById("compare-table-container");
 
-    const pickerResults = document.getElementById("picker-results") as HTMLElement;
-    const chipsEl        = document.getElementById("selected-chips") as HTMLElement;
-    const emptyEl         = document.getElementById("empty-compare") as HTMLElement;
-    const outputEl        = document.getElementById("compare-output") as HTMLElement;
-    const toast = (window as any).showToast as ((msg: string, type?: "success"|"info"|"remove") => void) | undefined;
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!input || !tableContainer) return;
 
-    // Fetched from the shared data endpoint (see src/pages/data/games.json.ts)
-    // instead of being embedded in this page's HTML — this used to be a
-    // ~350KB inline <script> block duplicated on every compare-page load.
-    // The browser caches this response, so repeat visits (and visits after
-    // the library or home page already fetched it) are effectively free.
-    let gameData: CompareGame[] = [];
+    let allGames: LibGame[] = [];
     try {
-      gameData = await fetch("/data/games.json").then((r) => r.json());
-    } catch (err) {
-      console.error("ArchiveDex: failed to load /data/games.json", err);
-      toast?.("Couldn't load game data — try refreshing", "info");
-      return;
+      allGames = await fetch("/data/games.json").then((r) => r.json());
+    } catch {
+      allGames = [];
     }
 
-    // ── State ──────────────────────────────────────────────
-    let selected: CompareGame[] = []; // array of game objects, max 3
+    let selectedGames: LibGame[] = [];
 
-    // ── Picker search ──────────────────────────────────────
-    pickerSearch.addEventListener("input", () => {
-      const q = pickerSearch.value.toLowerCase().trim();
-      if (!q) { pickerResults.classList.add("hidden"); return; }
+    // Parse URL parameter ?games=id1,id2 or ?ids=id1,id2 or fallback to localStorage tray
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramIds = (urlParams.get("games") || urlParams.get("ids") || "").split(",").filter(Boolean).slice(0, 4);
+    
+    let initialIds = paramIds;
+    if (!initialIds.length) {
+      try {
+        const tray = JSON.parse(localStorage.getItem("archivedex_compare_tray") || "[]");
+        if (Array.isArray(tray)) {
+          initialIds = tray.map((item: any) => item.id).filter(Boolean).slice(0, 4);
+        }
+      } catch (e) {}
+    }
 
-      const matches = gameData
-        .filter((g) => !selected.find((s) => s.id === g.id))
-        .filter((g) =>
-          g.name.toLowerCase().includes(q) ||
-          g.tags.some((t) => t.toLowerCase().includes(q)) ||
-          g.type.toLowerCase().includes(q) ||
-          g.category.toLowerCase().includes(q)
-        )
+    if (initialIds.length) {
+      selectedGames = initialIds
+        .map((id) => allGames.find((g) => g.id === id))
+        .filter((g): g is LibGame => Boolean(g));
+    }
+
+    function syncURL() {
+      const url = new URL(window.location.href);
+      if (selectedGames.length) {
+        url.searchParams.set("games", selectedGames.map((g) => g.id).join(","));
+      } else {
+        url.searchParams.delete("games");
+      }
+      history.replaceState({}, "", url.toString());
+
+      // Sync with tray dock
+      localStorage.setItem("archivedex_compare_tray", JSON.stringify(selectedGames.map(g => ({ id: g.id, name: g.name }))));
+    }
+
+    function renderChips() {
+      if (!chipsRow) return;
+      chipsRow.innerHTML = selectedGames.map((g) => `
+        <div class="flex items-center gap-2 rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-mono-spec font-bold text-cyan-200">
+          <span>${g.name}</span>
+          <span class="text-yellow-300">★ ${g.rating}</span>
+          <button class="remove-chip ml-1 text-slate-400 hover:text-red-400 font-black" data-id="${g.id}">✕</button>
+        </div>
+      `).join("");
+
+      chipsRow.querySelectorAll<HTMLButtonElement>(".remove-chip").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedGames = selectedGames.filter((g) => g.id !== btn.dataset.id);
+          syncURL();
+          render();
+        });
+      });
+    }
+
+    function buildStackedRadarHTML(games: LibGame[]) {
+      if (!games.length) return "";
+
+      const CX = 170;
+      const CY = 170;
+      const RADAR_R = 105;
+
+      const METRICS = [
+        { key: "difficulty", label: "Difficulty", avg: 51, angle: -90 },
+        { key: "exploration", label: "Exploration", avg: 53, angle: -30 },
+        { key: "grinding", label: "Grinding", avg: 53, angle: 30 },
+        { key: "qol", label: "QoL Features", avg: 54, angle: 90 },
+        { key: "balance", label: "Game Balance", avg: 54, angle: 150 },
+        { key: "music", label: "OST & Audio", avg: 52, angle: 210 },
+      ];
+
+      function getPoint(val: number, angleDeg: number, maxRadius = RADAR_R) {
+        const rad = (angleDeg * Math.PI) / 180;
+        const dist = (val / 100) * maxRadius;
+        return {
+          x: Math.round((CX + dist * Math.cos(rad)) * 10) / 10,
+          y: Math.round((CY + dist * Math.sin(rad)) * 10) / 10,
+        };
+      }
+
+      // Concentric level outlines (25%, 50%, 75%, 100%)
+      const rings = [25, 50, 75, 100].map((lvl, i) => {
+        const pts = METRICS.map((m) => {
+          const pt = getPoint(lvl, m.angle);
+          return `${pt.x},${pt.y}`;
+        }).join(" ");
+        return `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="${i === 3 ? "1.5" : "1"}" stroke-dasharray="${i < 3 ? "3 3" : "none"}" />`;
+      }).join("");
+
+      // Spoke axis lines
+      const spokes = METRICS.map((m) => {
+        const outer = getPoint(100, m.angle);
+        return `<line x1="${CX}" y1="${CY}" x2="${outer.x}" y2="${outer.y}" stroke="rgba(255,255,255,0.12)" stroke-width="1" />`;
+      }).join("");
+
+      // Outer labels
+      const labels = METRICS.map((m) => {
+        const lp = getPoint(122, m.angle);
+        return `<text x="${lp.x}" y="${lp.y + 4}" text-anchor="middle" font-size="9.5" font-family="JetBrains Mono, monospace" font-weight="bold" fill="#94a3b8">${m.label}</text>`;
+      }).join("");
+
+      // Faint Archive Average Benchmark Hexagon (Medium Hexagon ~53%)
+      const avgPts = METRICS.map((m) => {
+        const pt = getPoint(m.avg, m.angle);
+        return `${pt.x},${pt.y}`;
+      }).join(" ");
+      const avgPolygon = `<polygon points="${avgPts}" fill="rgba(148, 163, 184, 0.12)" stroke="rgba(148, 163, 184, 0.45)" stroke-width="1.5" stroke-dasharray="4 3" />`;
+
+      // Distinct theme palettes for up to 4 stacked games
+      const PALETTES = [
+        { stroke: "#22d3ee", fill: "rgba(34, 211, 238, 0.22)", glow: "rgba(34, 211, 238, 0.45)", text: "text-cyan-300", bg: "bg-cyan-500/10", border: "border-cyan-400/40" },
+        { stroke: "#c084fc", fill: "rgba(192, 132, 252, 0.20)", glow: "rgba(192, 132, 252, 0.45)", text: "text-purple-300", bg: "bg-purple-500/10", border: "border-purple-400/40" },
+        { stroke: "#34d399", fill: "rgba(52, 211, 153, 0.20)", glow: "rgba(52, 211, 153, 0.45)", text: "text-emerald-300", bg: "bg-emerald-500/10", border: "border-emerald-400/40" },
+        { stroke: "#fbbf24", fill: "rgba(251, 191, 36, 0.20)", glow: "rgba(251, 191, 36, 0.45)", text: "text-amber-300", bg: "bg-amber-500/10", border: "border-amber-400/40" },
+      ];
+
+      // Stacked series polygons & vertices
+      const stackedSeries = games.map((g, idx) => {
+        const pal = PALETTES[idx % PALETTES.length];
+        const s = g.stats || { difficulty: 50, exploration: 50, grinding: 50, qol: 50, balance: 50, music: 50 };
+        const pts = METRICS.map((m) => {
+          const val = (s as any)[m.key] ?? 50;
+          const pt = getPoint(val, m.angle);
+          return `${pt.x},${pt.y}`;
+        }).join(" ");
+
+        const dots = METRICS.map((m) => {
+          const val = (s as any)[m.key] ?? 50;
+          const pt = getPoint(val, m.angle);
+          return `<circle cx="${pt.x}" cy="${pt.y}" r="3.5" fill="${pal.stroke}" stroke="#090B10" stroke-width="1.5" />`;
+        }).join("");
+
+        return `
+          <g class="stacked-game-series" data-game="${g.id}">
+            <polygon points="${pts}" fill="${pal.fill}" stroke="${pal.stroke}" stroke-width="2.5" style="filter: drop-shadow(0 0 8px ${pal.glow});" />
+            ${dots}
+          </g>
+        `;
+      }).join("");
+
+      // Legend breakdown cards for the compared games
+      const legendCards = games.map((g, idx) => {
+        const pal = PALETTES[idx % PALETTES.length];
+        const s = g.stats || { difficulty: 50, exploration: 50, grinding: 50, qol: 50, balance: 50, music: 50 };
+        return `
+          <div class="rounded-2xl border ${pal.border} ${pal.bg} p-3.5 space-y-2.5 backdrop-blur-md">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="h-3 w-3 rounded-full shrink-0" style="background-color: ${pal.stroke}; box-shadow: 0 0 8px ${pal.stroke};"></span>
+                <span class="font-bold text-white text-xs truncate">${g.name}</span>
+              </div>
+              <span class="font-mono-spec font-black text-xs ${pal.text}">★ ${g.rating}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5 text-[10px] font-mono-spec text-slate-300">
+              <div class="rounded-lg bg-black/40 px-2 py-1">Dif: <strong class="text-white">${s.difficulty}</strong></div>
+              <div class="rounded-lg bg-black/40 px-2 py-1">Exp: <strong class="text-white">${s.exploration}</strong></div>
+              <div class="rounded-lg bg-black/40 px-2 py-1">Grd: <strong class="text-white">${s.grinding}</strong></div>
+              <div class="rounded-lg bg-black/40 px-2 py-1">QoL: <strong class="text-white">${s.qol}</strong></div>
+              <div class="rounded-lg bg-black/40 px-2 py-1">Bal: <strong class="text-white">${s.balance}</strong></div>
+              <div class="rounded-lg bg-black/40 px-2 py-1">OST: <strong class="text-white">${s.music}</strong></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="rounded-3xl border border-white/[0.08] bg-[#161B29] p-5 sm:p-7 shadow-2xl mb-6">
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-white/[0.08]">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-cyan-400 text-lg">⬡</span>
+                <h3 class="text-lg font-black text-white tracking-wide">Multi-Game Stacked Radar Matrix</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">
+                Visualizing all compared games simultaneously overlaid on the 6 core metrics against the medium Archive Benchmark (~53%).
+              </p>
+            </div>
+            <div class="flex items-center gap-2 text-xs font-mono-spec rounded-xl border border-white/[0.08] bg-[#111520] px-3.5 py-1.5 text-slate-400">
+              <span class="inline-block h-2.5 w-3.5 rounded border border-dashed border-slate-400 bg-slate-400/20"></span>
+              <span>Archive Benchmark (53% Faint Hexagon)</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-[360px_1fr] items-center gap-8 mt-5">
+            <!-- Center Stacked SVG Canvas -->
+            <div class="flex justify-center items-center py-2">
+              <svg width="340" height="340" viewBox="0 0 340 340" class="overflow-visible select-none max-w-full">
+                ${rings}
+                ${spokes}
+                ${avgPolygon}
+                ${stackedSeries}
+                ${labels}
+              </svg>
+            </div>
+
+            <!-- Side Legend Breakdown Cards -->
+            <div class="space-y-3">
+              <div class="text-[11px] font-mono-spec uppercase tracking-wider text-slate-400 font-bold">
+                Stacked Series Breakdown (${games.length} Compared Games)
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${legendCards}
+              </div>
+              <div class="flex items-center gap-2 pt-2 text-[11px] font-mono-spec text-slate-400">
+                <span class="text-cyan-400">✦</span>
+                <span>Protrusions beyond the faint dashed hexagon represent competitive edges in that dimension.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function render() {
+      renderChips();
+
+      if (!selectedGames.length) {
+        emptyState?.classList.remove("hidden");
+        tableContainer?.classList.add("hidden");
+        return;
+      }
+
+      emptyState?.classList.add("hidden");
+      tableContainer?.classList.remove("hidden");
+
+      const cols = selectedGames.length;
+      const gridColClass =
+        cols === 1 ? "grid-cols-[200px_1fr]" :
+        cols === 2 ? "grid-cols-[200px_1fr_1fr]" :
+        cols === 3 ? "grid-cols-[200px_1fr_1fr_1fr]" :
+        "grid-cols-[200px_1fr_1fr_1fr_1fr]";
+
+      const highestRating = Math.max(...selectedGames.map((g) => g.rating));
+
+      // Comparison rows definition
+      const specRows = [
+        {
+          label: "Platform Runtime",
+          fn: (g: LibGame) => `
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/40 px-2.5 py-1 text-cyan-300 font-bold">
+              ${g.runtime}
+            </span>
+          `,
+        },
+        {
+          label: "Base Game / Engine",
+          fn: (g: LibGame) => `<span class="font-bold text-slate-200">${g.base}</span>`,
+        },
+        {
+          label: "Completion Status",
+          fn: (g: LibGame) => {
+            const isComp = g.status === "Complete";
+            return `
+              <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-bold ${
+                isComp
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                  : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+              }">
+                <span class="h-1.5 w-1.5 rounded-full ${isComp ? "bg-emerald-400" : "bg-amber-400"}"></span>
+                ${g.status}
+              </span>
+            `;
+          },
+        },
+        {
+          label: "Difficulty Meter",
+          fn: (g: LibGame) => {
+            const pips = g.pips || 3;
+            const diamonds = Array.from({ length: 5 }, (_, i) =>
+              i < pips ? '<span class="text-amber-400">◆</span>' : '<span class="text-slate-600">◇</span>'
+            ).join("");
+            return `
+              <div class="space-y-1">
+                <div class="flex items-center gap-0.5 text-xs font-mono-spec">${diamonds}</div>
+                <div class="font-bold text-slate-200">${g.difficulty} (${pips}/5)</div>
+              </div>
+            `;
+          },
+        },
+        {
+          label: "Estimated Playtime",
+          fn: (g: LibGame) => `<span class="font-bold text-slate-200">⏱ ${g.playtime}</span>`,
+        },
+        {
+          label: "Creator / Lead Team",
+          fn: (g: LibGame) => `<span class="font-bold text-slate-200">👤 ${g.creator || "Community Team"}</span>`,
+        },
+        {
+          label: "Core Focus Tags",
+          fn: (g: LibGame) => `
+            <div class="flex flex-wrap gap-1.5">
+              ${g.tags.slice(0, 3).map((t) => `<span class="rounded bg-black/40 px-2 py-0.5 text-[10px] text-slate-300 border border-white/10">#${t}</span>`).join("")}
+            </div>
+          `,
+        },
+        {
+          label: "Project Overview",
+          fn: (g: LibGame) => `<p class="text-xs leading-relaxed text-slate-300 line-clamp-3">${g.description}</p>`,
+        },
+      ];
+
+      // Overlap Analysis: Shared vs Unique Tags
+      let overlapSection = "";
+      if (selectedGames.length >= 2) {
+        const sets = selectedGames.map((g) => new Set(g.tags));
+        const sharedTags = [...sets[0]].filter((t) => sets.slice(1).every((s) => s.has(t)));
+
+        overlapSection = `
+          <div class="mt-6 rounded-3xl border border-white/[0.08] bg-[#161B29] p-5 sm:p-6 space-y-4 shadow-xl">
+            <div class="flex items-center gap-2">
+              <span class="text-cyan-300 text-sm">✦</span>
+              <h3 class="text-xs font-mono-spec font-bold uppercase tracking-wider text-slate-300">
+                Shared Mechanical Overlap (${sharedTags.length} Shared Features)
+              </h3>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              ${sharedTags.length
+                ? sharedTags.map((t) => `<span class="rounded-full border border-cyan-400/40 bg-cyan-500/10 px-3 py-1 text-xs font-mono-spec text-cyan-200">#${t}</span>`).join("")
+                : '<span class="text-xs text-slate-500 font-mono-spec">No overlapping tags — each project represents a unique experience archetype.</span>'
+              }
+            </div>
+          </div>
+        `;
+      }
+
+      const tableMinWidth = Math.max(760, selectedGames.length * 260 + 220);
+
+      tableContainer.innerHTML = `
+        ${buildStackedRadarHTML(selectedGames)}
+
+        <!-- Unified Architectural Comparison Table -->
+        <div class="overflow-hidden rounded-3xl border border-white/[0.12] bg-[#151b2c] shadow-2xl">
+          <!-- Table Bar Header with Scroll Notice -->
+          <div class="flex items-center justify-between px-5 py-3 border-b border-white/[0.10] bg-[#0f1422] text-xs font-mono-spec">
+            <div class="flex items-center gap-2 text-slate-300 font-bold">
+              <span class="text-cyan-400">📊</span>
+              <span>Architectural Comparison Matrix (${selectedGames.length} Projects)</span>
+            </div>
+            <span class="text-slate-500 hidden sm:inline">↔ Scroll horizontally to inspect all columns</span>
+          </div>
+
+          <!-- Responsive Scrollable Table Area -->
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse" style="min-width: ${tableMinWidth}px;">
+              <thead>
+                <tr class="border-b border-white/[0.10] bg-[#0f1422]">
+                  <th class="p-4 sm:p-5 w-[190px] sm:w-[220px] min-w-[190px] sm:min-w-[220px] compare-sticky-col border-r-2 border-white/[0.12] font-mono-spec text-xs font-black uppercase tracking-wider text-slate-400">
+                    Project Overview
+                  </th>
+                  ${selectedGames.map((g) => `
+                    <th class="p-5 border-r border-white/[0.08] last:border-r-0 align-top bg-[#151b2c] min-w-[240px] sm:min-w-[260px] space-y-2">
+                      <div class="flex items-start justify-between gap-2">
+                        <span class="rounded bg-black/50 px-2 py-0.5 text-[10px] font-mono-spec font-bold text-cyan-300 border border-white/10">${g.runtime}</span>
+                        <button class="remove-chip rounded-lg border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-mono-spec font-bold text-slate-400 hover:border-red-400 hover:text-red-300 transition" data-id="${g.id}">
+                          ✕ Remove
+                        </button>
+                      </div>
+                      <a href="/games/${g.id}" class="text-base font-black text-white hover:text-cyan-300 line-clamp-2 block leading-snug mt-1.5 transition-colors">
+                        ${g.name}
+                      </a>
+                      <p class="text-xs text-slate-400 font-mono-spec">${g.category}</p>
+                      <a href="/games/${g.id}" class="inline-flex items-center gap-1 text-[11px] font-mono-spec font-bold text-cyan-400 hover:underline pt-1">
+                        Open Profile →
+                      </a>
+                    </th>
+                  `).join("")}
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/[0.08]">
+                <!-- Rating & Score Row -->
+                <tr class="hover:bg-white/[0.02] transition-colors">
+                  <td class="p-4 sm:p-5 compare-sticky-col border-r-2 border-white/[0.12] font-mono-spec text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Rating & Score
+                  </td>
+                  ${selectedGames.map((g) => {
+                    const pct = Math.round((g.rating / 10) * 100);
+                    const isHighest = g.rating === highestRating;
+                    return `
+                      <td class="p-5 border-r border-white/[0.08] last:border-r-0 align-middle">
+                        <div class="space-y-2.5">
+                          <div class="flex items-center justify-between font-mono-spec">
+                            <span class="text-lg font-black text-yellow-300">★ ${g.rating} <span class="text-[10px] text-slate-500 font-normal">/10</span></span>
+                            ${isHighest ? '<span class="text-[9px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.2)]">★ Highest Rated</span>' : ''}
+                          </div>
+                          <!-- High-contrast rating bar with dark inset track -->
+                          <div class="h-2.5 w-full rounded-full bg-black/70 border border-white/15 p-0.5 overflow-hidden shadow-inner">
+                            <div class="h-full rounded-full bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.5)]" style="width: ${pct}%;"></div>
+                          </div>
+                        </div>
+                      </td>
+                    `;
+                  }).join("")}
+                </tr>
+
+                <!-- Spec Data Rows -->
+                ${specRows.map((row, idx) => `
+                  <tr class="${idx % 2 === 0 ? 'bg-white/[0.015]' : ''} hover:bg-white/[0.03] transition-colors">
+                    <td class="p-4 sm:p-5 compare-sticky-col border-r-2 border-white/[0.12] font-mono-spec text-xs font-bold text-slate-300 uppercase tracking-wider">
+                      ${row.label}
+                    </td>
+                    ${selectedGames.map((g) => `
+                      <td class="p-4 sm:p-5 border-r border-white/[0.08] last:border-r-0 text-xs font-mono-spec text-slate-200 align-middle">
+                        ${row.fn(g)}
+                      </td>
+                    `).join("")}
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        ${overlapSection}
+
+        <div class="mt-5 flex justify-end">
+          <button id="copy-compare-link" class="rounded-xl border border-white/[0.1] bg-[#111520] px-4 py-2.5 text-xs font-mono-spec font-bold text-slate-300 hover:border-cyan-400 hover:text-cyan-300 transition shadow-lg">
+            🔗 Copy Shareable Matrix URL
+          </button>
+        </div>
+      `;
+
+      // Bind remove buttons inside table
+      tableContainer.querySelectorAll<HTMLButtonElement>(".remove-chip").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedGames = selectedGames.filter((g) => g.id !== btn.dataset.id);
+          syncURL();
+          render();
+        });
+      });
+
+      document.getElementById("copy-compare-link")?.addEventListener("click", () => {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+          (window as any).showToast?.("Comparison link copied to clipboard!", "success");
+        });
+      });
+    }
+
+    // Search input handler
+    input.addEventListener("input", () => {
+      const q = input.value.toLowerCase().trim();
+      if (!q) {
+        dropdown?.classList.add("hidden");
+        return;
+      }
+
+      const matches = allGames
+        .filter((g) => !selectedGames.some((s) => s.id === g.id))
+        .filter((g) => g.name.toLowerCase().includes(q) || g.tags.some((t) => t.toLowerCase().includes(q)))
         .slice(0, 6);
 
       if (!matches.length) {
-        pickerResults.innerHTML = `<p class="px-4 py-3 text-sm text-slate-500">No results</p>`;
-      } else {
-        pickerResults.innerHTML = matches.map((g) => `
-          <button
-            class="picker-result w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-800/80 transition"
-            data-id="${g.id}"
-          >
+        if (dropdown) dropdown.innerHTML = `<div class="p-3 text-xs text-slate-500 font-mono-spec">No games found</div>`;
+      } else if (dropdown) {
+        dropdown.innerHTML = matches.map((g) => `
+          <button class="add-game-match flex w-full items-center justify-between rounded-lg p-2.5 text-left hover:bg-[#1E2538] transition" data-id="${g.id}">
             <div>
-              <div class="font-black text-white">${g.name}</div>
-              <div class="text-xs text-slate-500">${g.type} · ${g.category}</div>
+              <div class="text-xs font-bold text-white">${g.name}</div>
+              <div class="text-[10px] text-slate-500 font-mono-spec">${g.runtime} · ${g.base} · ${g.category}</div>
             </div>
-            <div class="rounded-lg border border-yellow-400/25 bg-yellow-400/8 px-2 py-0.5 text-sm font-black text-yellow-300">${g.rating}</div>
+            <span class="text-xs font-mono-spec text-yellow-300 font-bold">★ ${g.rating}</span>
           </button>
         `).join("");
 
-        pickerResults.querySelectorAll<HTMLButtonElement>(".picker-result").forEach((btn) => {
+        dropdown.querySelectorAll<HTMLButtonElement>(".add-game-match").forEach((btn) => {
           btn.addEventListener("click", () => {
-            const game = gameData.find((g) => g.id === btn.dataset.id);
-            if (game && selected.length < 3) {
-              selected.push(game);
-              pickerSearch.value = "";
-              pickerResults.classList.add("hidden");
+            const game = allGames.find((g) => g.id === btn.dataset.id);
+            if (game && selectedGames.length < 4) {
+              selectedGames.push(game);
+              input.value = "";
+              dropdown.classList.add("hidden");
+              syncURL();
               render();
-              updateURL();
-              toast?.(`Added ${game.name}`, "success");
             }
           });
         });
       }
 
-      pickerResults.classList.remove("hidden");
+      dropdown?.classList.remove("hidden");
     });
 
-    // Close picker on outside click — guarded so repeat visits to this
-    // page (fresh script execution, but `document` itself persists)
-    // don't stack duplicate listeners.
-    if (!(window as any).__adexComparePickerCloseBound) {
-      (window as any).__adexComparePickerCloseBound = true;
-      document.addEventListener("click", (e) => {
-        const search  = document.getElementById("picker-search");
-        const results = document.getElementById("picker-results");
-        if (search && results && !search.contains(e.target as Node) && !results.contains(e.target as Node)) {
-          results.classList.add("hidden");
-        }
-      });
-    }
-
-    // ── Render chips ───────────────────────────────────────
-    function renderChips() {
-      if (!selected.length) {
-        chipsEl.innerHTML = `<p class="text-xs text-slate-600">No games selected yet — max 3</p>`;
-        return;
+    document.addEventListener("click", (e) => {
+      if (dropdown && !input.contains(e.target as Node) && !dropdown.contains(e.target as Node)) {
+        dropdown.classList.add("hidden");
       }
-      chipsEl.innerHTML = selected.map((g) => `
-        <div class="flex items-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 glow-cyan">
-          <span class="text-sm font-black text-cyan-200">${g.name}</span>
-          <span class="rounded-md border border-yellow-400/25 bg-yellow-400/8 px-1.5 py-0.5 text-xs font-black text-yellow-300">${g.rating}</span>
-          <button
-            class="remove-chip ml-1 text-slate-500 hover:text-red-400 transition font-black text-sm"
-            data-id="${g.id}"
-            aria-label="Remove ${g.name}"
-          >✕</button>
-        </div>
-      `).join("");
-
-      chipsEl.querySelectorAll<HTMLButtonElement>(".remove-chip").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const game = selected.find((g) => g.id === btn.dataset.id);
-          selected = selected.filter((g) => g.id !== btn.dataset.id);
-          render();
-          updateURL();
-          if (game) toast?.(`Removed ${game.name}`, "remove");
-        });
-      });
-    }
-
-    // ── Render comparison table ────────────────────────────
-    const STAT_ROWS: { label: string; key: keyof CompareGame }[] = [
-      { label: "Type",       key: "type" },
-      { label: "Base",       key: "base" },
-      { label: "Runtime",    key: "runtime" },
-      { label: "Status",     key: "status" },
-      { label: "Length",     key: "length" },
-      { label: "Difficulty", key: "difficulty" },
-      { label: "Grind",      key: "grind" },
-      { label: "Story",      key: "story" },
-      { label: "Pokédex",    key: "dex" },
-      { label: "Source",     key: "sourceStatus" },
-    ];
-
-    function ratingBar(rating: number) {
-      const pct = Math.round((rating / 10) * 100);
-      return `
-        <div class="flex items-center gap-3">
-          <span class="text-3xl font-black text-yellow-300" style="text-shadow:0 0 16px rgba(253,224,71,0.5)">${rating}</span>
-          <div class="flex-1 rounded-full bg-slate-800 h-2 overflow-hidden">
-            <div class="h-2 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 rating-bar-fill" style="width:0%" data-target="${pct}"></div>
-          </div>
-        </div>
-      `;
-    }
-
-    function tagOverlap() {
-      if (selected.length < 2) return "";
-      const sets = selected.map((g) => new Set(g.tags));
-      const shared = [...sets[0]].filter((t) => sets.slice(1).every((s) => s.has(t)));
-      if (!shared.length) return `<p class="text-xs text-slate-600">No shared tags</p>`;
-      return shared.map((t) =>
-        `<span class="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-300">${t}</span>`
-      ).join("");
-    }
-
-    function moodOverlap() {
-      if (selected.length < 2) return "";
-      const sets = selected.map((g) => new Set(g.mood));
-      const shared = [...sets[0]].filter((t) => sets.slice(1).every((s) => s.has(t)));
-      if (!shared.length) return `<p class="text-xs text-slate-600">No shared moods</p>`;
-      return shared.map((t) =>
-        `<span class="rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-xs font-bold text-violet-300">${t}</span>`
-      ).join("");
-    }
-
-    function renderTable() {
-      const cols = selected.length;
-      // 1/2/3 selected games need 2/3/4 grid columns (label column + one
-      // per game). This used to fall through to the 4-column class meant
-      // for 3 games whenever cols was anything other than 2 — including 1
-      // — leaving two blank trailing columns. Reachable by hitting
-      // "Compare" on a single detail page with nothing else queued yet.
-      const colClass =
-        cols === 1 ? "grid-cols-[180px_1fr]" :
-        cols === 2 ? "grid-cols-[180px_1fr_1fr]" :
-        "grid-cols-[180px_1fr_1fr_1fr]";
-
-      const header = `
-        <div class="grid ${colClass} gap-px overflow-hidden rounded-t-[1.5rem] bg-slate-800">
-          <div class="bg-slate-950 p-4"></div>
-          ${selected.map((g) => `
-            <div class="bg-slate-950/95 p-5">
-              <a href="/games/${g.id}" class="font-black text-white hover:text-cyan-200 text-lg leading-tight block transition">${g.name}</a>
-              <div class="mt-1 text-xs text-slate-500">${g.type} · ${g.category}</div>
-              <div class="mt-4">${ratingBar(g.rating)}</div>
-            </div>
-          `).join("")}
-        </div>
-      `;
-
-      const rows = STAT_ROWS.map((row, i) => {
-        const bg = i % 2 === 0 ? "bg-slate-950/70" : "bg-slate-950/40";
-        return `
-          <div class="grid ${colClass} gap-px bg-slate-800">
-            <div class="${bg} px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-500 flex items-center">${row.label}</div>
-            ${selected.map((g) => `
-              <div class="${bg} px-5 py-3 text-sm font-bold text-slate-200">${g[row.key]}</div>
-            `).join("")}
-          </div>
-        `;
-      }).join("");
-
-      const tagsRow = `
-        <div class="grid ${colClass} gap-px bg-slate-800">
-          <div class="bg-slate-950/70 px-5 py-4 text-xs font-black uppercase tracking-widest text-slate-500 flex items-start pt-4">Tags</div>
-          ${selected.map((g) => `
-            <div class="bg-slate-950/70 px-5 py-4 flex flex-wrap gap-2">
-              ${g.tags.map((t) => `<span class="rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-300">${t}</span>`).join("")}
-            </div>
-          `).join("")}
-        </div>
-      `;
-
-      const moodRow = `
-        <div class="grid ${colClass} gap-px bg-slate-800">
-          <div class="bg-slate-950/70 px-5 py-4 text-xs font-black uppercase tracking-widest text-slate-500 flex items-start pt-4">Mood</div>
-          ${selected.map((g) => `
-            <div class="bg-slate-950/70 px-5 py-4 flex flex-wrap gap-2">
-              ${g.mood.map((m) => `<span class="rounded-full border border-violet-400/20 bg-violet-400/5 px-2.5 py-1 text-xs text-violet-300">${m}</span>`).join("")}
-            </div>
-          `).join("")}
-        </div>
-      `;
-
-      const overlapSection = selected.length >= 2 ? `
-        <div class="mt-6 grid gap-4 sm:grid-cols-2">
-          <div class="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-5">
-            <p class="mb-3 text-xs font-black uppercase tracking-widest text-cyan-300">Shared tags</p>
-            <div class="flex flex-wrap gap-2">${tagOverlap()}</div>
-          </div>
-          <div class="rounded-2xl border border-violet-400/20 bg-violet-400/5 p-5">
-            <p class="mb-3 text-xs font-black uppercase tracking-widest text-violet-300">Shared mood</p>
-            <div class="flex flex-wrap gap-2">${moodOverlap()}</div>
-          </div>
-        </div>
-      ` : "";
-
-      return `
-        <div class="overflow-x-auto rounded-[1.5rem] border border-slate-800 overflow-hidden">
-          ${header}${rows}${tagsRow}${moodRow}
-        </div>
-        ${overlapSection}
-        <div class="mt-6 flex justify-end">
-          <button id="share-compare" class="magnetic-btn flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-5 py-2.5 text-sm font-black text-slate-300 hover:border-cyan-400/40 hover:text-cyan-300 transition">
-            🔗 Copy share link
-          </button>
-        </div>
-      `;
-    }
-
-    // ── Master render ──────────────────────────────────────
-    function render() {
-      renderChips();
-
-      if (selected.length === 0) {
-        emptyEl.classList.remove("hidden");
-        outputEl.classList.add("hidden");
-        outputEl.innerHTML = "";
-      } else {
-        emptyEl.classList.add("hidden");
-        outputEl.classList.remove("hidden");
-        if (!reduceMotion) {
-          outputEl.style.animation = "none";
-          void outputEl.offsetWidth;
-          outputEl.style.animation = "card-rise 0.4s cubic-bezier(0.16,1,0.3,1) both";
-        }
-        outputEl.innerHTML = renderTable();
-
-        // Animate rating bars filling in, and count up the numbers
-        requestAnimationFrame(() => {
-          outputEl.querySelectorAll<HTMLElement>(".rating-bar-fill").forEach((bar) => {
-            const target = bar.dataset.target;
-            if (reduceMotion) { bar.style.width = `${target}%`; }
-            else { requestAnimationFrame(() => { bar.style.transition = "width 0.7s cubic-bezier(0.16,1,0.3,1)"; bar.style.width = `${target}%`; }); }
-          });
-        });
-
-        document.getElementById("share-compare")?.addEventListener("click", () => {
-          navigator.clipboard.writeText(window.location.href).then(() => {
-            const btn = document.getElementById("share-compare");
-            if (btn) { btn.textContent = "✓ Copied!"; setTimeout(() => { btn.textContent = "🔗 Copy share link"; }, 2000); }
-            toast?.("Share link copied", "success");
-          });
-        });
-      }
-    }
-
-    // ── URL sync ───────────────────────────────────────────
-    function updateURL() {
-      const url = new URL(window.location.href);
-      if (selected.length) {
-        url.searchParams.set("games", selected.map((g) => g.id).join(","));
-      } else {
-        url.searchParams.delete("games");
-      }
-      history.replaceState({}, "", url.toString());
-    }
-
-    // ── Load from URL on mount ─────────────────────────────
-    const params = new URLSearchParams(window.location.search);
-    const gamesParam = params.get("games");
-    if (gamesParam) {
-      const ids = gamesParam.split(",").slice(0, 3);
-      selected = ids.map((id) => gameData.find((g) => g.id === id)).filter((g): g is CompareGame => Boolean(g));
-    }
+    });
 
     render();
   }
 
-  document.addEventListener("astro:page-load", initComparePage);
-</script>
-
-<style>
-  @media (prefers-reduced-motion: reduce) {
-    #compare-output { animation: none !important; }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initCompare);
+  } else {
+    initCompare();
   }
-</style>
+  document.addEventListener("astro:page-load", initCompare);
+</script>

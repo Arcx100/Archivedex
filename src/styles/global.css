@@ -1,89 +1,1187 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 :root {
   color-scheme: dark;
-  /* ── Color tokens ── */
-  --c-primary:   #67e8f9;   /* cyan-300 */
-  --c-secondary: #c4b5fd;   /* violet-300 */
-  --c-rating:    #fde047;   /* yellow-300 */
-  --c-positive:  #6ee7b7;   /* emerald-300 */
-  --c-warning:   #fdba74;   /* orange-300 */
-  --c-danger:    #f87171;   /* red-400 */
-  --c-muted:     #64748b;   /* slate-500 */
-  --bg-base:     #070914;
-  --bg-s1:       #0d1117;   /* cards */
-  --bg-s2:       #111827;   /* panels */
-  --bg-s3:       #1a2235;   /* hover */
+
+  /* ── 4-Step Surface Hierarchy (Cosmic Violet & Cyan Default) ── */
+  --surface-canvas:  #080a10;
+  --surface-rail:    #0f1422;
+  --surface-card:    #151b2c;
+  --surface-hover:   #1d253d;
+  --border-card:     rgba(34, 211, 238, 0.14);
+  --border-card-top: rgba(34, 211, 238, 0.35);
+  --matrix-dot:      rgba(34, 211, 238, 0.08);
+
+  /* ── Pokédex Theme 1: Cosmic Cyan & Violet (Default) ── */
+  --theme-name:      "Cosmic Cyan & Violet";
+  --accent-primary:  #22d3ee;   /* Electric Cyan 400 */
+  --accent-highlight:#67e8f9;   /* Cyan 300 */
+  --accent-glow:     rgba(34, 211, 238, 0.38);
+  --accent-primary-text: #080a10;
+  --theme-pill-bg:   rgba(34, 211, 238, 0.14);
+  --theme-pill-border: rgba(34, 211, 238, 0.45);
+  --theme-ring:      #22d3ee;
+
+  --accent-secondary:#a855f7;   /* Cosmic Violet 500 */
+  --accent-secondary-highlight: #c084fc; /* Violet 400 */
+  --accent-secondary-glow: rgba(168, 85, 247, 0.38);
+  --accent-secondary-text: #ffffff;
+  --theme-secondary-pill-bg: rgba(168, 85, 247, 0.14);
+  --theme-secondary-pill-border: rgba(168, 85, 247, 0.45);
+
+  --hero-glow-1:     rgba(34, 211, 238, 0.24);
+  --hero-glow-2:     rgba(168, 85, 247, 0.20);
+  --hero-glow-3:     rgba(245, 158, 11, 0.08);
+  --hero-orb-outer-border: rgba(34, 211, 238, 0.35);
+  --hero-orb-outer-bg: rgba(34, 211, 238, 0.08);
+  --hero-orb-inner-border: rgba(168, 85, 247, 0.45);
+  --hero-orb-inner-bg: rgba(168, 85, 247, 0.15);
+  --hero-orb-inner-text: #c084fc;
+
+  /* ── Semantic Colors ── */
+  --c-rating:        #fde047;   /* yellow-300 */
+  --c-positive:      #6ee7b7;   /* emerald-300 */
+  --c-warning:       #fdba74;   /* orange-300 */
+  --c-danger:        #f87171;   /* red-400 */
+  --c-muted:         #64748b;   /* slate-500 */
 }
 
-html { scroll-behavior: smooth; }
+/* ── Pokédex Theme 2: Atomic Purple & Rose (GBC Translucent Cyber) ── */
+html[data-theme="atomic"], body[data-theme="atomic"] {
+  --theme-name:      "Atomic Purple & Rose";
+  --surface-canvas:  #0a0714;
+  --surface-rail:    #120c24;
+  --surface-card:    #191133;
+  --surface-hover:   #25184b;
+  --border-card:     rgba(168, 85, 247, 0.22);
+  --border-card-top: rgba(192, 132, 252, 0.45);
+  --matrix-dot:      rgba(168, 85, 247, 0.12);
+
+  --accent-primary:  #a855f7;   /* Neon Violet */
+  --accent-highlight:#c084fc;   /* Lavender 400 */
+  --accent-glow:     rgba(168, 85, 247, 0.45);
+  --accent-primary-text: #0a0714;
+  --theme-pill-bg:   rgba(168, 85, 247, 0.16);
+  --theme-pill-border: rgba(168, 85, 247, 0.50);
+  --theme-ring:      #c084fc;
+
+  --accent-secondary:#f43f5e;   /* Hot Rose / Fuchsia */
+  --accent-secondary-highlight: #fb7185; /* Rose 400 */
+  --accent-secondary-glow: rgba(244, 63, 94, 0.45);
+  --accent-secondary-text: #ffffff;
+  --theme-secondary-pill-bg: rgba(244, 63, 94, 0.16);
+  --theme-secondary-pill-border: rgba(244, 63, 94, 0.50);
+
+  --hero-glow-1:     rgba(168, 85, 247, 0.26);
+  --hero-glow-2:     rgba(244, 63, 94, 0.20);
+  --hero-glow-3:     rgba(192, 132, 252, 0.09);
+  --hero-orb-outer-border: rgba(168, 85, 247, 0.40);
+  --hero-orb-outer-bg: rgba(168, 85, 247, 0.10);
+  --hero-orb-inner-border: rgba(244, 63, 94, 0.45);
+  --hero-orb-inner-bg: rgba(244, 63, 94, 0.18);
+  --hero-orb-inner-text: #fb7185;
+}
+
+/* ── Pokédex Theme 3: Emerald & Sky Teal (Hoenn Jade & Marine Sky) ── */
+html[data-theme="emerald"], body[data-theme="emerald"] {
+  --theme-name:      "Emerald & Sky Teal";
+  --surface-canvas:  #050e09;
+  --surface-rail:    #0a1811;
+  --surface-card:    #0f241a;
+  --surface-hover:   #173627;
+  --border-card:     rgba(16, 185, 129, 0.20);
+  --border-card-top: rgba(52, 211, 153, 0.45);
+  --matrix-dot:      rgba(16, 185, 129, 0.12);
+
+  --accent-primary:  #10b981;   /* Rayquaza Emerald 500 */
+  --accent-highlight:#34d399;   /* Mint Emerald 400 */
+  --accent-glow:     rgba(16, 185, 129, 0.45);
+  --accent-primary-text: #050e09;
+  --theme-pill-bg:   rgba(16, 185, 129, 0.16);
+  --theme-pill-border: rgba(16, 185, 129, 0.50);
+  --theme-ring:      #34d399;
+
+  --accent-secondary:#06b6d4;   /* Ocean Teal 500 */
+  --accent-secondary-highlight: #67e8f9; /* Cyan 300 */
+  --accent-secondary-glow: rgba(6, 182, 212, 0.40);
+  --accent-secondary-text: #050e09;
+  --theme-secondary-pill-bg: rgba(6, 182, 212, 0.16);
+  --theme-secondary-pill-border: rgba(6, 182, 212, 0.50);
+
+  --hero-glow-1:     rgba(16, 185, 129, 0.25);
+  --hero-glow-2:     rgba(6, 182, 212, 0.18);
+  --hero-glow-3:     rgba(52, 211, 153, 0.08);
+  --hero-orb-outer-border: rgba(16, 185, 129, 0.40);
+  --hero-orb-outer-bg: rgba(16, 185, 129, 0.10);
+  --hero-orb-inner-border: rgba(6, 182, 212, 0.45);
+  --hero-orb-inner-bg: rgba(6, 182, 212, 0.16);
+  --hero-orb-inner-text: #67e8f9;
+}
+
+/* ── Pokédex Theme 4: FireRed & Amber (Kanto Magma & Solar Flame) ── */
+html[data-theme="firered"], body[data-theme="firered"] {
+  --theme-name:      "FireRed & Amber";
+  --surface-canvas:  #100607;
+  --surface-rail:    #1a0b0d;
+  --surface-card:    #261013;
+  --surface-hover:   #38181c;
+  --border-card:     rgba(239, 68, 68, 0.24);
+  --border-card-top: rgba(248, 113, 113, 0.48);
+  --matrix-dot:      rgba(239, 68, 68, 0.12);
+
+  --accent-primary:  #ef4444;   /* Magma Red 500 */
+  --accent-highlight:#f87171;   /* Red 400 */
+  --accent-glow:     rgba(239, 68, 68, 0.45);
+  --accent-primary-text: #ffffff;
+  --theme-pill-bg:   rgba(239, 68, 68, 0.16);
+  --theme-pill-border: rgba(239, 68, 68, 0.50);
+  --theme-ring:      #f87171;
+
+  --accent-secondary:#f97316;   /* Solar Flame Amber 500 */
+  --accent-secondary-highlight: #fbbf24; /* Amber 400 */
+  --accent-secondary-glow: rgba(249, 115, 22, 0.45);
+  --accent-secondary-text: #100607;
+  --theme-secondary-pill-bg: rgba(249, 115, 22, 0.16);
+  --theme-secondary-pill-border: rgba(249, 115, 22, 0.50);
+
+  --hero-glow-1:     rgba(239, 68, 68, 0.25);
+  --hero-glow-2:     rgba(249, 115, 22, 0.20);
+  --hero-glow-3:     rgba(251, 191, 36, 0.08);
+  --hero-orb-outer-border: rgba(239, 68, 68, 0.40);
+  --hero-orb-outer-bg: rgba(239, 68, 68, 0.10);
+  --hero-orb-inner-border: rgba(249, 115, 22, 0.45);
+  --hero-orb-inner-bg: rgba(249, 115, 22, 0.16);
+  --hero-orb-inner-text: #fbbf24;
+}
+
+/* ── Pokédex Theme 5: Solar Gold & Silver (Johto Ho-Oh & Lugia) ── */
+html[data-theme="gold"], body[data-theme="gold"] {
+  --theme-name:      "Solar Gold & Silver";
+  --surface-canvas:  #0d0a06;
+  --surface-rail:    #18130a;
+  --surface-card:    #241c10;
+  --surface-hover:   #342818;
+  --border-card:     rgba(251, 191, 36, 0.24);
+  --border-card-top: rgba(253, 224, 71, 0.50);
+  --matrix-dot:      rgba(251, 191, 36, 0.12);
+
+  --accent-primary:  #fbbf24;   /* Ho-Oh Solar Gold 400 */
+  --accent-highlight:#fde047;   /* Radiant Sun Gold 300 */
+  --accent-glow:     rgba(251, 191, 36, 0.45);
+  --accent-primary-text: #0d0a06;
+  --theme-pill-bg:   rgba(251, 191, 36, 0.16);
+  --theme-pill-border: rgba(251, 191, 36, 0.50);
+  --theme-ring:      #fbbf24;
+
+  --accent-secondary:#dbeafe;   /* Lugia Luminous Silver (Light with subtle cool icy tint) */
+  --accent-secondary-highlight: #f1f5f9; /* Bright Platinum Silver */
+  --accent-secondary-glow: rgba(219, 234, 254, 0.40);
+  --accent-secondary-text: #0d0a06;
+  --theme-secondary-pill-bg: rgba(219, 234, 254, 0.14);
+  --theme-secondary-pill-border: rgba(219, 234, 254, 0.45);
+
+  --hero-glow-1:     rgba(251, 191, 36, 0.24);
+  --hero-glow-2:     rgba(219, 234, 254, 0.14);
+  --hero-glow-3:     rgba(253, 224, 71, 0.08);
+  --hero-orb-outer-border: rgba(251, 191, 36, 0.45);
+  --hero-orb-outer-bg: rgba(251, 191, 36, 0.10);
+  --hero-orb-inner-border: rgba(219, 234, 254, 0.45);
+  --hero-orb-inner-bg: rgba(219, 234, 254, 0.14);
+  --hero-orb-inner-text: #f1f5f9;
+}
+
+/* ── Pokédex Theme 6: Abyssal Sapphire & Aqua (Kyogre Ocean & Aqua) ── */
+html[data-theme="sapphire"], body[data-theme="sapphire"] {
+  --theme-name:      "Abyssal Sapphire & Aqua";
+  --surface-canvas:  #040814;
+  --surface-rail:    #091126;
+  --surface-card:    #0e1b3c;
+  --surface-hover:   #152857;
+  --border-card:     rgba(14, 165, 233, 0.24);
+  --border-card-top: rgba(56, 189, 248, 0.50);
+  --matrix-dot:      rgba(14, 165, 233, 0.12);
+
+  --accent-primary:  #0ea5e9;   /* Ocean Sapphire 500 */
+  --accent-highlight:#38bdf8;   /* Sky 400 */
+  --accent-glow:     rgba(14, 165, 233, 0.45);
+  --accent-primary-text: #ffffff;
+  --theme-pill-bg:   rgba(14, 165, 233, 0.16);
+  --theme-pill-border: rgba(14, 165, 233, 0.50);
+  --theme-ring:      #38bdf8;
+
+  --accent-secondary:#14b8a6;   /* Bioluminescent Aqua 500 */
+  --accent-secondary-highlight: #5eead4; /* Aqua Teal 300 */
+  --accent-secondary-glow: rgba(20, 184, 166, 0.40);
+  --accent-secondary-text: #040814;
+  --theme-secondary-pill-bg: rgba(20, 184, 166, 0.16);
+  --theme-secondary-pill-border: rgba(20, 184, 166, 0.50);
+
+  --hero-glow-1:     rgba(14, 165, 233, 0.25);
+  --hero-glow-2:     rgba(20, 184, 166, 0.20);
+  --hero-glow-3:     rgba(56, 189, 248, 0.08);
+  --hero-orb-outer-border: rgba(14, 165, 233, 0.40);
+  --hero-orb-outer-bg: rgba(14, 165, 233, 0.10);
+  --hero-orb-inner-border: rgba(20, 184, 166, 0.45);
+  --hero-orb-inner-bg: rgba(20, 184, 166, 0.16);
+  --hero-orb-inner-text: #5eead4;
+}
+
+/* ── Pokédex Theme 7: Pokéball High-Contrast (Silph Carmine & Pure White) ── */
+html[data-theme="pokeball"], body[data-theme="pokeball"] {
+  --theme-name:      "Pokéball High-Contrast";
+  --surface-canvas:  #050508;
+  --surface-rail:    #0d0d12;
+  --surface-card:    #14141c;
+  --surface-hover:   #1f1f2a;
+  --border-card:     rgba(255, 255, 255, 0.18);
+  --border-card-top: rgba(244, 63, 94, 0.60);
+  --matrix-dot:      rgba(255, 255, 255, 0.08);
+
+  --accent-primary:  #f43f5e;   /* Pokéball Carmine 500 */
+  --accent-highlight:#fb7185;   /* Rose 400 */
+  --accent-glow:     rgba(244, 63, 94, 0.48);
+  --accent-primary-text: #ffffff;
+  --theme-pill-bg:   rgba(244, 63, 94, 0.16);
+  --theme-pill-border: rgba(244, 63, 94, 0.50);
+  --theme-ring:      #f43f5e;
+
+  --accent-secondary:#f8fafc;   /* Pure White / Platinum */
+  --accent-secondary-highlight: #ffffff;
+  --accent-secondary-glow: rgba(255, 255, 255, 0.40);
+  --accent-secondary-text: #050508;
+  --theme-secondary-pill-bg: rgba(255, 255, 255, 0.16);
+  --theme-secondary-pill-border: rgba(255, 255, 255, 0.50);
+
+  --hero-glow-1:     rgba(244, 63, 94, 0.28);
+  --hero-glow-2:     rgba(255, 255, 255, 0.15);
+  --hero-glow-3:     rgba(251, 113, 133, 0.08);
+  --hero-orb-outer-border: rgba(244, 63, 94, 0.45);
+  --hero-orb-outer-bg: rgba(244, 63, 94, 0.10);
+  --hero-orb-inner-border: rgba(255, 255, 255, 0.50);
+  --hero-orb-inner-bg: rgba(255, 255, 255, 0.16);
+  --hero-orb-inner-text: #ffffff;
+}
+
+html {
+  scroll-behavior: smooth;
+}
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at top left,    rgba(34, 211, 238, 0.12), transparent 34rem),
-    radial-gradient(circle at top right,   rgba(168, 85, 247, 0.10), transparent 36rem),
-    radial-gradient(circle at bottom,      rgba(245, 158, 11, 0.05), transparent 36rem),
-    #070914;
+  background-color: var(--surface-canvas) !important;
   color: #f8fafc;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: 'Plus Jakarta Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-::selection { background: rgba(34, 211, 238, 0.35); }
+/* ── Global Surface Theme Palette Application ── */
+#launcher-sidebar,
+#home-right-rail,
+header[data-astro-transition-persist="main-header"] {
+  background-color: var(--surface-rail) !important;
+  border-color: var(--border-card) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
 
-/* ── Grid background ── */
-.archive-grid {
-  background-image:
-    linear-gradient(rgba(148,163,184,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148,163,184,0.04) 1px, transparent 1px);
-  background-size: 44px 44px;
+footer {
+  background-color: var(--surface-canvas) !important;
+  border-color: var(--border-card) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* UNIVERSAL COMPREHENSIVE THEME STYLING SYSTEM                   */
+/* Applies active Pokédex theme to ALL pages and components       */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* 1. Global Surfaces & Containers */
+html[data-theme],
+html[data-theme] body,
+html[data-theme] main,
+html[data-theme] #app-shell,
+html[data-theme] #main-scroll-container,
+html[data-theme] [class*="bg-[#080a10]"],
+html[data-theme] [class*="bg-[#070914]"] {
+  background-color: var(--surface-canvas) !important;
+  transition: background-color 0.3s ease;
+}
+
+/* All Card Surfaces & Elevated Panels Across ALL Pages */
+html[data-theme] .glass-panel,
+html[data-theme] .hardware-card-wrap,
+html[data-theme] .tilt-card,
+html[data-theme] .card-text-strip,
+html[data-theme] .surface-card,
+html[data-theme] .card-layered,
+html[data-theme] [class*="bg-[#161B29]"],
+html[data-theme] [class*="bg-slate-950"],
+html[data-theme] [class*="bg-[#0d1117]"],
+html[data-theme] #compare-empty,
+html[data-theme] #library-table-view,
+html[data-theme] #lib-empty-state,
+html[data-theme] #cmd-k-modal > div,
+html[data-theme] #gacha-modal > div,
+html[data-theme] #watchlist-modal > div,
+html[data-theme] #theme-menu,
+html[data-theme] #lib-card-theme-menu,
+html[data-theme] #rom-verifier-box {
+  background-color: var(--surface-card) !important;
+  border-color: var(--border-card) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* All Inner Wells, Secondary Boxes, Footer & Rails Across ALL Pages */
+html[data-theme] #launcher-sidebar,
+html[data-theme] #home-right-rail,
+html[data-theme] header,
+html[data-theme] footer,
+html[data-theme] #sticky-record-bar,
+html[data-theme] #compare-dock,
+html[data-theme] .micro-spec-bar,
+html[data-theme] .surface-rail,
+html[data-theme] [class*="bg-[#111520]"],
+html[data-theme] [class*="bg-[#0c0f17]"],
+html[data-theme] [class*="bg-[#090B10]"],
+html[data-theme] [class*="bg-slate-900"],
+html[data-theme] [class*="bg-slate-800"]:not(.progress-track),
+html[data-theme] #main-content [class*="bg-[#111520]"] {
+  background-color: var(--surface-rail) !important;
+  border-color: var(--border-card) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Hover surfaces */
+html[data-theme] [class*="hover:bg-[#1E2538]"]:hover,
+html[data-theme] [class*="hover:bg-slate-900"]:hover,
+html[data-theme] [class*="hover:bg-slate-800"]:hover,
+html[data-theme] [class*="bg-[#1E2538]"],
+html[data-theme] .surface-hover {
+  background-color: var(--surface-hover) !important;
+  transition: background-color 0.2s ease;
+}
+
+/* Dynamic Radar Polygons & Gradients */
+html[data-theme] .radar-game-polygon {
+  stroke: var(--accent-primary) !important;
+  fill: var(--theme-pill-bg) !important;
+  filter: drop-shadow(0 0 10px var(--accent-glow)) !important;
+}
+
+html[data-theme] .hero-backdrop-gradient {
+  background: linear-gradient(to top, var(--surface-card) 0%, var(--surface-canvas) 60%, transparent 100%) !important;
+}
+
+html[data-theme] .index-media-fade {
+  background: linear-gradient(to bottom, transparent, var(--surface-canvas)) !important;
+}
+
+html[data-theme] .quick-peek-screenshot {
+  background: linear-gradient(135deg, var(--surface-rail), var(--surface-card), #000) !important;
+}
+
+/* Comparison Matrix Table Sticky Column & Polish */
+.compare-sticky-col,
+html[data-theme] .compare-sticky-col {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 20 !important;
+  background-color: var(--surface-rail) !important;
+  border-right: 2px solid var(--border-card, rgba(255, 255, 255, 0.12)) !important;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme] #crown-match-card {
+  background: linear-gradient(to bottom, rgba(253, 224, 71, 0.08), var(--surface-card)) !important;
+}
+
+/* Card Borders Across All Pages */
+html[data-theme] [class*="border-white/[0.08]"],
+html[data-theme] [class*="border-white/[0.06]"],
+html[data-theme] [class*="border-white/[0.04]"],
+html[data-theme] [class*="border-white/[0.1]"],
+html[data-theme] [class*="border-white/[0.12]"],
+html[data-theme] [class*="border-white/[0.14]"],
+html[data-theme] [class*="border-slate-700"],
+html[data-theme] [class*="border-slate-800"] {
+  border-color: var(--border-card) !important;
+}
+
+/* 2. Primary Action Buttons & CTAs Across ALL Pages */
+html[data-theme] .bg-cyan-300:not(.theme-swatch-dot):not([data-static-color]),
+html[data-theme] .bg-cyan-400:not(.theme-swatch-dot):not([data-static-color]),
+html[data-theme] .bg-cyan-500:not(.theme-swatch-dot):not([data-static-color]),
+html[data-theme] [class*="bg-cyan-300"]:not([class*="bg-cyan-300/"]):not(.theme-swatch-dot):not([data-static-color]),
+html[data-theme] [class*="bg-cyan-400"]:not([class*="bg-cyan-400/"]):not(.theme-swatch-dot):not([data-static-color]),
+html[data-theme] [class*="bg-cyan-500"]:not([class*="bg-cyan-500/"]):not(.theme-swatch-dot):not([data-static-color]),
+html[data-theme] .btn-theme-primary {
+  background-color: var(--accent-primary) !important;
+  color: var(--accent-primary-text, #080a10) !important;
+  box-shadow: 0 0 20px var(--accent-glow) !important;
+  transition: background-color 0.25s ease, filter 0.25s ease, box-shadow 0.25s ease;
+}
+
+html[data-theme] .bg-cyan-300:not(.theme-swatch-dot):not([data-static-color]):hover,
+html[data-theme] .bg-cyan-400:not(.theme-swatch-dot):not([data-static-color]):hover,
+html[data-theme] [class*="hover:bg-cyan-200"]:hover,
+html[data-theme] [class*="hover:bg-cyan-300"]:hover,
+html[data-theme] [class*="hover:bg-cyan-400"]:hover,
+html[data-theme] .btn-theme-primary:hover {
+  filter: brightness(1.15) !important;
+  box-shadow: 0 0 28px var(--accent-glow) !important;
+}
+
+/* 2b. Secondary Action Buttons Across ALL Pages */
+html[data-theme] .bg-violet-400:not(.theme-swatch-dot):not([data-static-color]),
+html[data-theme] .bg-violet-500:not(.theme-swatch-dot):not([data-static-color]),
+html[data-theme] [class*="bg-violet-400"]:not([class*="bg-violet-400/"]):not(.theme-swatch-dot):not([data-static-color]),
+html[data-theme] [class*="bg-violet-500"]:not([class*="bg-violet-500/"]):not(.theme-swatch-dot):not([data-static-color]),
+html[data-theme] .btn-theme-secondary {
+  background-color: var(--accent-secondary) !important;
+  color: var(--accent-secondary-text, #ffffff) !important;
+  box-shadow: 0 0 20px var(--accent-secondary-glow) !important;
+  transition: background-color 0.25s ease, filter 0.25s ease, box-shadow 0.25s ease;
+}
+
+html[data-theme] [class*="hover:bg-violet-300"]:hover,
+html[data-theme] [class*="hover:bg-violet-400"]:hover,
+html[data-theme] .btn-theme-secondary:hover {
+  filter: brightness(1.15) !important;
+  box-shadow: 0 0 28px var(--accent-secondary-glow) !important;
+}
+
+/* Theme Swatch Dots inside #theme-menu (Must always preserve fixed preset colors) */
+.theme-swatch-dot,
+#theme-menu .theme-swatch-dot {
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* 3. Primary Accent Highlights, Links & Icons Across ALL Pages */
+html[data-theme] [class*="text-cyan-400"],
+html[data-theme] [class*="text-cyan-300"],
+html[data-theme] [class*="text-cyan-200"],
+html[data-theme] a.text-cyan-400,
+html[data-theme] span.text-cyan-300,
+html[data-theme] h2 span.text-cyan-300,
+html[data-theme] .theme-accent-primary-text {
+  color: var(--accent-highlight) !important;
+  transition: color 0.25s ease;
+}
+
+html[data-theme] a[class*="text-cyan-400"]:hover,
+html[data-theme] a[class*="text-cyan-300"]:hover,
+html[data-theme] a[class*="hover:text-cyan-200"]:hover,
+html[data-theme] a[class*="hover:text-cyan-300"]:hover,
+html[data-theme] [class*="hover:text-cyan-200"]:hover,
+html[data-theme] [class*="hover:text-cyan-300"]:hover {
+  color: var(--accent-primary) !important;
+  text-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* 3b. Secondary Accent Highlights, Links & Icons Across ALL Pages */
+html[data-theme] [class*="text-violet-400"],
+html[data-theme] [class*="text-violet-300"],
+html[data-theme] [class*="text-violet-200"],
+html[data-theme] a.text-violet-400,
+html[data-theme] span.text-violet-300,
+html[data-theme] .theme-accent-secondary-text {
+  color: var(--accent-secondary-highlight) !important;
+  transition: color 0.25s ease;
+}
+
+html[data-theme] a[class*="text-violet-400"]:hover,
+html[data-theme] a[class*="text-violet-300"]:hover,
+html[data-theme] [class*="hover:text-violet-200"]:hover,
+html[data-theme] [class*="hover:text-violet-300"]:hover {
+  color: var(--accent-secondary) !important;
+  text-shadow: 0 0 10px var(--accent-secondary-glow);
+}
+
+/* 4. Themed Badges, Chips & Active Tags Across ALL Pages */
+html[data-theme] [class*="bg-cyan-400/6"],
+html[data-theme] [class*="bg-cyan-400/10"],
+html[data-theme] [class*="bg-cyan-500/10"],
+html[data-theme] [class*="bg-cyan-500/20"],
+html[data-theme] .active-tool-filter,
+html[data-theme] .active-tag-chip,
+html[data-theme] .active-mode,
+html[data-theme] .active-view,
+html[data-theme] .active-rec-tab {
+  background-color: var(--theme-pill-bg) !important;
+  border-color: var(--theme-pill-border) !important;
+  color: var(--accent-highlight) !important;
+  box-shadow: 0 0 12px var(--accent-glow) !important;
+}
+
+html[data-theme] [class*="border-cyan-400"],
+html[data-theme] [class*="border-cyan-400/20"],
+html[data-theme] [class*="border-cyan-400/25"],
+html[data-theme] [class*="border-cyan-400/30"],
+html[data-theme] [class*="border-cyan-400/40"],
+html[data-theme] [class*="border-cyan-400/50"] {
+  border-color: var(--theme-pill-border) !important;
+}
+
+html[data-theme] [class*="hover:border-cyan-400"]:hover,
+html[data-theme] [class*="hover:border-cyan-400/40"]:hover,
+html[data-theme] [class*="hover:border-cyan-400/50"]:hover {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 16px var(--accent-glow) !important;
+}
+
+/* 4b. Secondary Themed Badges, Chips & Borders */
+html[data-theme] [class*="bg-violet-400/10"],
+html[data-theme] [class*="bg-violet-500/10"],
+html[data-theme] [class*="bg-violet-400/15"],
+html[data-theme] [class*="bg-violet-500/20"],
+html[data-theme] #open-lucky,
+html[data-theme] #lucky-result-link {
+  background-color: var(--theme-secondary-pill-bg) !important;
+  border-color: var(--theme-secondary-pill-border) !important;
+  color: var(--accent-secondary-highlight) !important;
+}
+
+html[data-theme] [class*="border-violet-400"],
+html[data-theme] [class*="border-violet-400/20"],
+html[data-theme] [class*="border-violet-400/30"],
+html[data-theme] [class*="border-violet-400/40"],
+html[data-theme] [class*="border-violet-400/50"],
+html[data-theme] [class*="border-violet-500"] {
+  border-color: var(--theme-secondary-pill-border) !important;
+}
+
+html[data-theme] [class*="hover:border-violet-400"]:hover,
+html[data-theme] [class*="hover:border-violet-400/60"]:hover,
+html[data-theme] [class*="hover:border-violet-400/70"]:hover,
+html[data-theme] #open-lucky:hover {
+  border-color: var(--accent-secondary) !important;
+  box-shadow: 0 0 16px var(--accent-secondary-glow) !important;
+}
+
+/* 5. Inputs & Search Focus Rings */
+html[data-theme] input:focus,
+html[data-theme] [class*="focus:border-cyan-400"]:focus {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 18px var(--accent-glow) !important;
+}
+
+/* 6. Rating Ring Gauges & Hexagon Stat Radar Chart */
+/* Radar Chart SVG */
+html[data-theme] polygon[stroke="#22d3ee"] {
+  fill: var(--theme-pill-bg) !important;
+  stroke: var(--accent-primary) !important;
+  filter: drop-shadow(0 0 12px var(--accent-glow)) !important;
+}
+
+html[data-theme] circle[fill="#67e8f9"] {
+  fill: var(--accent-highlight) !important;
+}
+
+/* Ring Gauge Gameplay Circle */
+html[data-theme] circle[stroke="#22d3ee"] {
+  stroke: var(--accent-primary) !important;
+  filter: drop-shadow(0 0 8px var(--accent-glow)) !important;
+}
+
+/* 7. Active Navigation Glow */
+html[data-theme] .nav-link.active-nav,
+html[data-theme] a.active-nav {
+  background: var(--theme-pill-bg) !important;
+  border-left: 3px solid var(--accent-primary) !important;
+  color: var(--accent-highlight) !important;
+  box-shadow: inset 0 0 16px var(--accent-glow) !important;
+}
+
+/* 8. Command Palette Keyboard Highlight */
+html[data-theme] .cmd-k-item.border-cyan-400\/40,
+html[data-theme] .cmd-k-item.border-cyan-400 {
+  border-color: var(--accent-primary) !important;
+  background-color: var(--surface-hover) !important;
+  box-shadow: 0 0 14px var(--accent-glow) !important;
+}
+
+/* 9. Header Branding Logo Box & Pulse Dot */
+html[data-theme] header a.group > div {
+  background-color: var(--theme-pill-bg) !important;
+  border-color: var(--theme-pill-border) !important;
+  color: var(--accent-highlight) !important;
+  box-shadow: 0 0 18px var(--accent-glow) !important;
+}
+
+html[data-theme] #right-rail-dot {
+  background-color: var(--accent-primary) !important;
+  box-shadow: 0 0 10px var(--accent-glow) !important;
+}
+
+/* 10. Progress Bars */
+html[data-theme] #nav-progress,
+html[data-theme] #quiz-progress-bar {
+  background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary), var(--accent-highlight)) !important;
+}
+
+html[data-theme] #lucky-progress {
+  background: linear-gradient(to right, var(--accent-secondary), var(--accent-primary)) !important;
+}
+
+/* 11. Hero Orb Rings */
+html[data-theme] .hero-orb-ring {
+  border-color: var(--hero-orb-outer-border) !important;
+  background-color: var(--hero-orb-outer-bg) !important;
+  box-shadow: 0 0 35px var(--accent-glow) !important;
+}
+
+html[data-theme] .hero-orb-inner {
+  border-color: var(--hero-orb-inner-border) !important;
+  background-color: var(--hero-orb-inner-bg) !important;
+  color: var(--hero-orb-inner-text, var(--accent-secondary-highlight)) !important;
+  box-shadow: 0 0 25px var(--accent-secondary-glow) !important;
+}
+
+/* 12. Glow Utilities */
+.text-glow-primary,
+.text-glow-cyan,
+html[data-theme] .text-glow-cyan,
+html[data-theme] .text-glow-primary {
+  text-shadow: 0 0 24px var(--accent-glow) !important;
+}
+
+.text-glow-secondary,
+.text-glow-violet,
+html[data-theme] .text-glow-violet,
+html[data-theme] .text-glow-secondary {
+  text-shadow: 0 0 24px var(--accent-secondary-glow) !important;
+}
+
+/* 13. Dynamic Background Radial Gradients */
+.theme-hero-glow-1 {
+  background: radial-gradient(circle at 75% 30%, var(--hero-glow-1), transparent 26rem) !important;
+}
+.theme-hero-glow-2 {
+  background: radial-gradient(circle at 88% 15%, var(--hero-glow-2), transparent 22rem) !important;
+}
+.theme-hero-glow-3 {
+  background: radial-gradient(circle at 8% 85%, var(--hero-glow-3), transparent 20rem) !important;
+}
+.theme-panel-glow-1 {
+  background: radial-gradient(circle at 50% 30%, var(--hero-glow-1), transparent 16rem) !important;
+}
+.theme-panel-glow-2 {
+  background: radial-gradient(circle at 60% 75%, var(--hero-glow-2), transparent 18rem) !important;
+}
+.theme-modal-glow-1 {
+  background: radial-gradient(circle at 30% 20%, var(--hero-glow-1), transparent 60%) !important;
+}
+.theme-modal-glow-2 {
+  background: radial-gradient(circle at 80% 80%, var(--hero-glow-2), transparent 55%) !important;
+}
+
+/* 14. Global Selection & Skeletons */
+html[data-theme] ::selection {
+  background-color: var(--theme-pill-bg) !important;
+  color: var(--accent-highlight) !important;
+}
+
+html[data-theme] .skeleton {
+  background-color: var(--surface-hover) !important;
+}
+
+/* ── Typography & Monospace Helpers ── */
+.font-mono-spec {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-feature-settings: "tnum" 1;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ── Dot-matrix ambient grid ── */
+.dot-matrix-grid {
+  background-image: radial-gradient(var(--matrix-dot, rgba(34, 211, 238, 0.08)) 1.2px, transparent 1.2px);
+  background-size: 26px 26px;
+  transition: background-image 0.4s ease;
+}
+
+/* ── 4-Step Surface Card Layering ── */
+.surface-canvas { background-color: var(--surface-canvas) !important; }
+.surface-rail   { background-color: var(--surface-rail) !important; }
+.surface-card   { background-color: var(--surface-card) !important; }
+.surface-hover  { background-color: var(--surface-hover) !important; }
+
+.card-layered {
+  background-color: var(--surface-card) !important;
+  border: 1px solid var(--border-card) !important;
+  border-top-color: var(--border-card-top) !important;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+}
+
+.card-layered:hover {
+  background-color: var(--surface-hover) !important;
+  border-color: var(--theme-pill-border) !important;
+  border-top-color: var(--accent-highlight) !important;
+}
+
+/* ── Theme dynamic elements ── */
+.theme-glow {
+  box-shadow: 0 0 24px var(--accent-glow) !important;
+}
+
+.theme-accent-text {
+  color: var(--accent-primary) !important;
+  text-shadow: 0 0 14px var(--accent-glow);
+}
+
+.theme-pill,
+.active-view,
+.active-rec-tab {
+  background-color: var(--theme-pill-bg) !important;
+  border: 1px solid var(--theme-pill-border) !important;
+  color: var(--accent-highlight) !important;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* Nav links active state */
+.nav-link.active-nav {
+  background: var(--theme-pill-bg) !important;
+  border-left: 3px solid var(--accent-primary) !important;
+  color: var(--accent-highlight) !important;
 }
 
 /* ── Glass panel ── */
 .glass-panel {
-  border: 1px solid rgba(148,163,184,0.12);
-  background: rgba(13,17,23,0.82);
-  box-shadow: 0 28px 90px rgba(0,0,0,0.32);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--border-card) !important;
+  border-top: 1px solid var(--border-card-top) !important;
+  background: var(--surface-card) !important;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
 }
 
-/* ── Glow utilities ── */
-.glow-cyan    { box-shadow: 0 0 24px rgba(103,232,249,0.35), 0 0 48px rgba(103,232,249,0.12); }
-.glow-violet  { box-shadow: 0 0 24px rgba(196,181,253,0.35), 0 0 48px rgba(196,181,253,0.12); }
-.glow-yellow  { box-shadow: 0 0 24px rgba(253,224,71,0.35),  0 0 48px rgba(253,224,71,0.12); }
-.glow-emerald { box-shadow: 0 0 24px rgba(110,231,183,0.35), 0 0 48px rgba(110,231,183,0.12); }
-
-.text-glow-cyan   { text-shadow: 0 0 20px rgba(103,232,249,0.7); }
-.text-glow-violet { text-shadow: 0 0 20px rgba(196,181,253,0.7); }
-.text-glow-yellow { text-shadow: 0 0 20px rgba(253,224,71,0.6); }
-
-/* ── Cover card base ── */
-.cover-card {
+/* ── 3D Hardware Box-Art Card & Aspect Ratios ── */
+/* ── 3D Hardware Box-Art Card & Standardized Proportions ── */
+.hardware-card-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 398px;
+  max-height: 398px;
+  border-radius: 1rem;
+  background-color: var(--surface-card);
+  transition: transform 0.2s ease-out, border-color 0.25s ease, box-shadow 0.25s ease;
   position: relative;
   overflow: hidden;
-  border-radius: 1rem 1rem 0 0;
 }
-.cover-card::after {
-  content: '';
+
+.quick-peek-box {
+  height: 208px;
+  min-height: 208px;
+  max-height: 208px;
+  width: 100%;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-text-strip {
+  height: 154px;
+  min-height: 154px;
+  max-height: 154px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 1rem;
+}
+
+.micro-spec-bar {
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* CARD THEMES ENGINE (DISTINCT PHYSICAL & DIGITAL ARCHETYPES)   */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* ── 1. HOLO NEO: Cybernetic Holographic Foil & Prismatic Sheen ── */
+[data-card-theme="holo"] .hardware-card-wrap,
+.card-theme-holo {
+  background: linear-gradient(165deg, #161b29 0%, #111522 55%, #181328 100%) !important;
+  border: 1px solid rgba(34, 211, 238, 0.28) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  border-radius: 1.125rem !important;
+  position: relative;
+}
+
+[data-card-theme="holo"] .hardware-card-wrap::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #22d3ee, #a855f7, #f43f5e, #fbbf24, #22d3ee);
+  border-radius: 1.125rem 1.125rem 0 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+[data-card-theme="holo"] .hardware-card-wrap:hover {
+  border-color: rgba(34, 211, 238, 0.65) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(34, 211, 238, 0.35), 0 0 60px rgba(168, 85, 247, 0.22) !important;
+}
+
+[data-card-theme="holo"] .card-text-strip {
+  background: rgba(22, 27, 41, 0.88) !important;
+  backdrop-filter: blur(14px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-card-theme="holo"] .micro-spec-bar {
+  background: rgba(15, 19, 30, 0.95) !important;
+  border-top: 1px solid rgba(34, 211, 238, 0.2) !important;
+}
+
+/* ── 2. RETRO CARTRIDGE: Molded Hardware Plastic & PCB Gold Pins ── */
+[data-card-theme="retro"] .hardware-card-wrap,
+.card-theme-retro {
+  background-color: #232836 !important;
+  border: 3px solid #161922 !important;
+  border-top-color: #424b61 !important;
+  border-left-color: #363d50 !important;
+  border-right-color: #161922 !important;
+  border-bottom-color: #10121a !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 
+    inset 2px 2px 0 rgba(255, 255, 255, 0.18),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.85),
+    0 18px 45px rgba(0, 0, 0, 0.75) !important;
+  position: relative;
+}
+
+/* Molded cartridge finger-grip ridges at top edge */
+[data-card-theme="retro"] .hardware-card-wrap::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 5px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #161922 0px,
+    #161922 4px,
+    #424b61 4px,
+    #424b61 8px
+  );
+  border-radius: 0 0 3px 3px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+  z-index: 10;
+  pointer-events: none;
+}
+
+[data-card-theme="retro"] .hardware-card-wrap:hover {
+  border-color: #eab308 !important;
+  border-top-color: #fef08a !important;
+  box-shadow: 
+    inset 2px 2px 0 rgba(254, 240, 138, 0.35),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.9),
+    0 22px 55px rgba(0, 0, 0, 0.85),
+    0 0 25px rgba(234, 179, 8, 0.35) !important;
+}
+
+/* Cartridge Glossy Sticker Label Text Strip */
+[data-card-theme="retro"] .card-text-strip {
+  background: #141720 !important;
+  border-top: 3px solid #0e1017 !important;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.7) !important;
+  margin: 0 3px !important;
+  border-radius: 5px 5px 0 0 !important;
+}
+
+[data-card-theme="retro"] .card-text-strip a {
+  color: #fde047 !important;
+}
+
+/* PCB Gold Connector Pin Micro-Spec Bar */
+[data-card-theme="retro"] .micro-spec-bar {
+  background: #0f1218 !important;
+  border-top: 2px solid #d97706 !important;
+  box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.45) !important;
+  color: #fbbf24 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+[data-card-theme="retro"] .diff-pip {
+  border-radius: 2px !important;
+}
+[data-card-theme="retro"] .diff-pip.filled-1,
+[data-card-theme="retro"] .diff-pip.filled-2,
+[data-card-theme="retro"] .diff-pip.filled-3,
+[data-card-theme="retro"] .diff-pip.filled-4,
+[data-card-theme="retro"] .diff-pip.filled-5 {
+  background-color: #eab308 !important;
+  box-shadow: 0 0 6px #eab308 !important;
+}
+
+/* ── 3. MONOLITH OBSIDIAN: Stealth HUD Terminal & Razor Grid ── */
+[data-card-theme="monolith"] .hardware-card-wrap,
+.card-theme-monolith {
+  background: #040508 !important;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px) !important;
+  background-size: 16px 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  border-radius: 3px !important;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.95) !important;
+  position: relative;
+}
+
+/* Technical HUD Inner Frame with Dashed Crosshairs */
+[data-card-theme="monolith"] .hardware-card-wrap::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+[data-card-theme="monolith"] .hardware-card-wrap:hover {
+  border-color: #ffffff !important;
+  box-shadow: 
+    0 0 25px rgba(255, 255, 255, 0.4),
+    inset 0 0 15px rgba(255, 255, 255, 0.08),
+    0 25px 60px rgba(0, 0, 0, 0.98) !important;
+}
+
+[data-card-theme="monolith"] .card-text-strip {
+  background: #06070a !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+
+[data-card-theme="monolith"] .card-text-strip a {
+  font-family: 'JetBrains Mono', monospace !important;
+  letter-spacing: 0.02em !important;
+  color: #ffffff !important;
+}
+
+[data-card-theme="monolith"] .micro-spec-bar {
+  background: #020305 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #38bdf8 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  text-transform: uppercase !important;
+}
+
+[data-card-theme="monolith"] .diff-pip {
+  border-radius: 0px !important;
+  height: 5px !important;
+  width: 9px !important;
+}
+[data-card-theme="monolith"] .diff-pip.filled-1,
+[data-card-theme="monolith"] .diff-pip.filled-2,
+[data-card-theme="monolith"] .diff-pip.filled-3,
+[data-card-theme="monolith"] .diff-pip.filled-4,
+[data-card-theme="monolith"] .diff-pip.filled-5 {
+  background-color: #38bdf8 !important;
+  box-shadow: 0 0 8px #38bdf8 !important;
+}
+
+/* ── Custom Independent Scrollbars ── */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-highlight, rgba(34, 211, 238, 0.6));
+}
+
+/* ── Collapsible Sidebars ── */
+#launcher-sidebar.is-collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-right-width: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+#home-right-rail.is-collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-left-width: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+.hardware-box-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: #0b0e17;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  transform-style: preserve-3d;
+}
+
+/* Hardware ratios */
+.aspect-box-gba {
+  aspect-ratio: 4 / 3;
+}
+.aspect-box-gbc {
+  aspect-ratio: 1 / 1;
+}
+.aspect-box-nds {
+  aspect-ratio: 9 / 10;
+}
+.aspect-box-pc {
+  aspect-ratio: 16 / 9;
+}
+
+/* ── Interactive Recommendation Tabs ── */
+.active-rec-tab {
+  background-color: var(--theme-pill-bg, rgba(34, 211, 238, 0.15)) !important;
+  color: var(--accent-highlight, #67e8f9) !important;
+  border: 1px solid var(--theme-pill-border, rgba(34, 211, 238, 0.45)) !important;
+  box-shadow: 0 0 15px var(--accent-glow, rgba(34, 211, 238, 0.25));
+}
+
+/* Hover Quick-Peek crossfade (400ms) */
+.quick-peek-box {
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-peek-screenshot {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, transparent 40%, rgba(7,9,20,0.95) 100%);
+  opacity: 0;
+  transition: opacity 400ms ease, transform 400ms ease;
+  transform: scale(1.04);
 }
 
-/* ── Card design tokens ──
-   Shared by GameCard.astro (SSR) and the client-side card renderer in
-   library.astro (JS-generated cards for filtered / "load more" results).
-   Defined once here instead of as a repeated inline `style` attribute so
-   every card instance costs one short class name instead of ~150-250 bytes
-   of duplicated CSS text. Keep the two card renderers using the SAME class
-   names — if you add a category or change a gradient, update it here once
-   and both renderers pick it up automatically. */
-.card-noise {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  background-size: 150px 150px;
+.hardware-card-wrap:hover .quick-peek-screenshot {
+  opacity: 1;
+  transform: scale(1);
 }
 
+.quick-actions-bar {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 300ms ease, transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10;
+}
+
+.hardware-card-wrap:hover .quick-actions-bar {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Micro-Spec Bar ── */
+.micro-spec-bar {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: rgba(9, 11, 16, 0.75);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+}
+
+/* ── Difficulty Pips ── */
+.difficulty-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.diff-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.diff-pip.filled-1 { background-color: #34d399; box-shadow: 0 0 6px #34d39988; }
+.diff-pip.filled-2 { background-color: #60a5fa; box-shadow: 0 0 6px #60a5fa88; }
+.diff-pip.filled-3 { background-color: #facc15; box-shadow: 0 0 6px #facc1588; }
+.diff-pip.filled-4 { background-color: #fb923c; box-shadow: 0 0 6px #fb923c88; }
+.diff-pip.filled-5 { background-color: #f87171; box-shadow: 0 0 6px #f8717188; }
+
+/* ── 3D Card Tilt Effect ── */
+.tilt-card {
+  transform-style: preserve-3d;
+  transition: transform 0.14s ease-out, box-shadow 0.3s ease;
+  will-change: transform;
+}
+
+.tilt-glare {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.18), transparent 60%);
+  transition: opacity 0.25s ease;
+  mix-blend-mode: overlay;
+}
+
+.tilt-card:hover .tilt-glare {
+  opacity: 1;
+}
+
+/* ── Text clamp ── */
+.clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Category Gradient Tokens ── */
 .cat-grad-essential-collection { background: linear-gradient(135deg, #06b6d4, #7c3aed); }
 .cat-grad-must-play            { background: linear-gradient(135deg, #7c3aed, #db2777); }
 .cat-grad-story-focused        { background: linear-gradient(135deg, #7c3aed, #4338ca); }
@@ -100,25 +1198,6 @@ body {
 .cat-grad-pmd-inspired         { background: linear-gradient(135deg, #0d9488, #134e4a); }
 .cat-grad-default              { background: linear-gradient(135deg, #334155, #1e293b); }
 
-.status-dot-complete   { background: #6ee7b7; box-shadow: 0 0 6px #6ee7b788; }
-.status-dot-wip        { background: #fdba74; box-shadow: 0 0 6px #fdba7488; }
-.status-dot-demo       { background: #67e8f9; box-shadow: 0 0 6px #67e8f988; }
-.status-dot-historical { background: #94a3b8; box-shadow: 0 0 6px #94a3b888; }
-
-/* ── Text clamp ── */
-.clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.clamp-3 {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
 /* ── Animations ── */
 @keyframes arc-fill {
   from { stroke-dashoffset: var(--arc-total); }
@@ -127,120 +1206,54 @@ body {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes shimmer {
-  from { background-position: -200% 0; }
-  to   { background-position:  200% 0; }
-}
 @keyframes pulse-ring {
-  0%,100% { box-shadow: 0 0 0 0   rgba(103,232,249,0.4); }
-  50%     { box-shadow: 0 0 0 12px rgba(103,232,249,0); }
-}
-@keyframes orb-pulse {
-  0%,100% { box-shadow: 0 0 60px rgba(34,211,238,0.15); transform: scale(1); }
-  50%     { box-shadow: 0 0 110px rgba(34,211,238,0.28); transform: scale(1.025); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4); }
+  50%      { box-shadow: 0 0 0 10px rgba(34, 211, 238, 0); }
 }
 @keyframes float {
-  0%,100% { transform: translateY(0px); }
-  50%     { transform: translateY(-8px); }
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-8px); }
 }
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+@keyframes pokeball-shake {
+  0% { transform: rotate(0deg); }
+  15% { transform: rotate(-18deg); }
+  30% { transform: rotate(18deg); }
+  45% { transform: rotate(-12deg); }
+  60% { transform: rotate(12deg); }
+  75% { transform: rotate(-6deg); }
+  100% { transform: rotate(0deg); }
 }
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes skeleton-pulse {
-  0%,100% { opacity: 0.45; }
-  50%     { opacity: 0.9; }
-}
-
-/* ── Animation classes ── */
-.hero-orb-ring  { animation: orb-pulse 4s ease-in-out infinite; }
-.hero-orb-inner { animation: float 5s ease-in-out infinite; }
-.pulse-ring     { animation: pulse-ring 2.5s ease-in-out infinite; }
-
-/* ── Card entrance ── */
-.card-animate { animation: card-rise 0.45s ease both; }
-.card-animate:nth-child(1) { animation-delay: 0ms; }
-.card-animate:nth-child(2) { animation-delay: 70ms; }
-.card-animate:nth-child(3) { animation-delay: 140ms; }
-.card-animate:nth-child(4) { animation-delay: 210ms; }
-
-/* ── Stat card ── */
-.stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
-.stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
-
-/* ── Modals ── */
-#welcome-overlay { animation: fade-in 0.25s ease; }
-#welcome-overlay > div { animation: slide-up 0.3s cubic-bezier(0.16,1,0.3,1); }
-#lucky-overlay { animation: fade-in 0.2s ease; }
-#lucky-overlay > div { animation: slide-up 0.28s cubic-bezier(0.16,1,0.3,1); }
-
-/* ── Skeleton ── */
-.skeleton {
-  background: rgb(30 41 59 / 0.85);
-  animation: skeleton-pulse 1.6s ease-in-out infinite;
-  border-radius: 0.5rem;
+@keyframes pokeball-pop {
+  0% { transform: scale(1); filter: brightness(1); }
+  40% { transform: scale(1.25); filter: brightness(2) drop-shadow(0 0 35px var(--accent-highlight)); }
+  100% { transform: scale(1); filter: brightness(1); }
 }
 
-/* ── Reduced motion ── */
-@media (prefers-reduced-motion: reduce) {
-  .hero-orb-ring, .hero-orb-inner, .pulse-ring, .stat-card,
-  #welcome-overlay, #welcome-overlay > div,
-  #lucky-overlay, #lucky-overlay > div,
-  .skeleton, .card-animate {
-    animation: none;
-    transition: none;
-  }
+.animate-pokeball-shake {
+  animation: pokeball-shake 0.8s ease-in-out infinite;
+  transform-origin: bottom center;
 }
 
-/* ════════════════════════════════════════════ */
-/* PAGE TRANSITIONS (Astro ClientRouter)         */
-/* ════════════════════════════════════════════ */
-@keyframes adex-fade-in  { from { opacity: 0; } to { opacity: 1; } }
-@keyframes adex-fade-out { from { opacity: 1; } to { opacity: 0; } }
-@keyframes adex-rise-in  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes adex-rise-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
-
-::view-transition-old(root) {
-  animation: 180ms cubic-bezier(0.4,0,0.2,1) both adex-fade-out;
-}
-::view-transition-new(root) {
-  animation: 220ms cubic-bezier(0.16,1,0.3,1) both adex-rise-in;
+.animate-pokeball-pop {
+  animation: pokeball-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
-}
-
-/* ── Top-of-page nav progress bar (shown during navigation) ── */
-#nav-progress {
-  position: fixed; top: 0; left: 0; height: 2px; width: 0%;
-  background: linear-gradient(90deg, #67e8f9, #c4b5fd);
-  box-shadow: 0 0 12px rgba(103,232,249,0.7);
-  z-index: 9999;
-  transition: width 0.4s ease, opacity 0.3s ease;
-  opacity: 0;
-}
-#nav-progress.active { opacity: 1; }
-
-/* ════════════════════════════════════════════ */
-/* AMBIENT PARTICLES                             */
-/* ════════════════════════════════════════════ */
+/* ── Ambient Particles ── */
 @keyframes particle-drift {
-  0%   { transform: translate(0,0) scale(0.7); opacity: 0; }
-  12%  { opacity: var(--p-opacity, 0.5); }
+  0%   { transform: translate(0, 0) scale(0.7); opacity: 0; }
+  15%  { opacity: var(--p-opacity, 0.5); }
   85%  { opacity: var(--p-opacity, 0.5); }
   100% { transform: translate(var(--p-dx, 16px), var(--p-dy, -140px)) scale(1); opacity: 0; }
 }
+
 .particle-field {
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
 }
+
 .particle {
   position: absolute;
   bottom: 0;
@@ -248,64 +1261,25 @@ body {
   animation-delay: var(--p-delay, 0s);
   will-change: transform, opacity;
 }
-@media (prefers-reduced-motion: reduce) {
-  .particle { animation: none; opacity: 0; }
-}
 
-/* ════════════════════════════════════════════ */
-/* CARD 3D TILT                                  */
-/* ════════════════════════════════════════════ */
-.tilt-card {
-  transform-style: preserve-3d;
-  transition: transform 0.12s ease-out, border-color 0.3s ease, box-shadow 0.3s ease;
-  will-change: transform;
-}
-.tilt-glare {
-  position: absolute; inset: 0;
-  z-index: 5;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.16), transparent 60%);
-  transition: opacity 0.25s ease;
-  mix-blend-mode: overlay;
-}
-.tilt-card:hover .tilt-glare { opacity: 1; }
-@media (hover: none), (prefers-reduced-motion: reduce) {
-  .tilt-card { transition: transform 0.2s ease; }
-}
-
-/* ════════════════════════════════════════════ */
-/* SCROLL REVEAL (IntersectionObserver-driven)   */
-/* ════════════════════════════════════════════ */
+/* ── Scroll Reveal ── */
 [data-reveal] {
   opacity: 0;
-  transform: translateY(22px);
-  transition: opacity 0.65s cubic-bezier(0.16,1,0.3,1), transform 0.65s cubic-bezier(0.16,1,0.3,1);
+  transform: translateY(18px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   transition-delay: var(--reveal-delay, 0ms);
 }
 [data-reveal].is-revealed {
   opacity: 1;
   transform: translateY(0);
 }
-[data-reveal="left"]  { transform: translateX(-22px); }
-[data-reveal="left"].is-revealed  { transform: translateX(0); }
-[data-reveal="right"] { transform: translateX(22px); }
-[data-reveal="right"].is-revealed { transform: translateX(0); }
-[data-reveal="scale"] { transform: scale(0.94); }
-[data-reveal="scale"].is-revealed { transform: scale(1); }
 
-@media (prefers-reduced-motion: reduce) {
-  [data-reveal] { opacity: 1; transform: none; transition: none; }
-}
-
-/* ════════════════════════════════════════════ */
-/* TOAST SYSTEM                                  */
-/* ════════════════════════════════════════════ */
+/* ── Toasts ── */
 #toast-stack {
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
-  z-index: 9998;
+  z-index: 9999;
   display: flex;
   flex-direction: column-reverse;
   gap: 0.6rem;
@@ -317,123 +1291,46 @@ body {
   align-items: center;
   gap: 0.6rem;
   max-width: 22rem;
-  padding: 0.8rem 1.1rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(148,163,184,0.16);
-  background: rgba(13,17,23,0.92);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+  padding: 0.75rem 1.1rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--border-card);
+  background: rgba(17, 21, 32, 0.95);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
   font-size: 0.8125rem;
   font-weight: 700;
   color: #e2e8f0;
   transform: translateX(120%);
   opacity: 0;
-  transition: transform 0.38s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
 }
-.toast.toast-show { transform: translateX(0); opacity: 1; }
-.toast-icon { font-size: 0.95rem; line-height: 1; flex-shrink: 0; }
-.toast-success { border-color: rgba(110,231,183,0.3); }
-.toast-success .toast-icon { color: #6ee7b7; }
-.toast-info    { border-color: rgba(103,232,249,0.3); }
-.toast-info .toast-icon    { color: #67e8f9; }
-.toast-remove  { border-color: rgba(248,113,113,0.25); }
-.toast-remove .toast-icon  { color: #f87171; }
+.toast.toast-show {
+  transform: translateX(0);
+  opacity: 1;
+}
 
+/* ── Custom Scrollbars ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-canvas);
+}
+::-webkit-scrollbar-thumb {
+  background: #2a344d;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3b496b;
+}
+
+/* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
-  .toast { transition: opacity 0.2s ease; transform: none !important; }
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
-
-/* ════════════════════════════════════════════ */
-/* ANIMATED COUNTERS                             */
-/* ════════════════════════════════════════════ */
-[data-counter] { font-variant-numeric: tabular-nums; }
-
-/* ════════════════════════════════════════════ */
-/* SLIDING TAB INDICATOR                         */
-/* ════════════════════════════════════════════ */
-.tab-indicator {
-  position: absolute;
-  bottom: -1px;
-  height: 2px;
-  background: linear-gradient(90deg, #67e8f9, #c4b5fd);
-  box-shadow: 0 0 10px rgba(103,232,249,0.6);
-  transition: transform 0.32s cubic-bezier(0.65,0,0.35,1), width 0.32s cubic-bezier(0.65,0,0.35,1);
-  will-change: transform, width;
-}
-@media (prefers-reduced-motion: reduce) {
-  .tab-indicator { transition: none; }
-}
-
-/* Whole-panel entrance, retriggered via JS class toggle each time a
-   hidden tab panel becomes active — safer than IntersectionObserver
-   for content that starts at display:none. */
-.tab-panel-enter { animation: card-rise 0.4s cubic-bezier(0.16,1,0.3,1) both; }
-@media (prefers-reduced-motion: reduce) {
-  .tab-panel-enter { animation: none; }
-}
-
-/* ════════════════════════════════════════════ */
-/* CURSOR SPOTLIGHT (hero panels)                */
-/* ════════════════════════════════════════════ */
-.spotlight {
-  position: absolute; inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  background: radial-gradient(circle 360px at var(--mx, 50%) var(--my, 50%), rgba(103,232,249,0.10), transparent 70%);
-}
-.spotlight-active .spotlight { opacity: 1; }
-@media (hover: none) { .spotlight { display: none; } }
-
-/* ════════════════════════════════════════════ */
-/* SPARKLE SWEEP (rank-1 / top-pick badges)      */
-/* ════════════════════════════════════════════ */
-@keyframes sparkle-sweep {
-  0%   { transform: translateX(-120%) skewX(-15deg); }
-  100% { transform: translateX(220%)  skewX(-15deg); }
-}
-.sparkle-badge { position: relative; overflow: hidden; }
-.sparkle-badge::after {
-  content: '';
-  position: absolute; top: 0; left: 0;
-  width: 35%; height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
-  animation: sparkle-sweep 2.8s ease-in-out infinite;
-  animation-delay: 1s;
-}
-@media (prefers-reduced-motion: reduce) {
-  .sparkle-badge::after { animation: none; }
-}
-
-/* ════════════════════════════════════════════ */
-/* MAGNETIC BUTTON                               */
-/* ════════════════════════════════════════════ */
-.magnetic-btn {
-  transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
-  will-change: transform;
-}
-@media (hover: none) { .magnetic-btn { transition: none; } }
-
-/* ════════════════════════════════════════════ */
-/* GENTLE NAV UNDERLINE                          */
-/* ════════════════════════════════════════════ */
-.nav-link-underline {
-  position: relative;
-}
-.nav-link-underline::after {
-  content: '';
-  position: absolute;
-  left: 1rem; right: 1rem; bottom: 0.2rem;
-  height: 2px;
-  background: linear-gradient(90deg, #67e8f9, #c4b5fd);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
-}
-.nav-link-underline:hover::after,
-.nav-link-underline.active::after {
-  transform: scaleX(1);
-}
-

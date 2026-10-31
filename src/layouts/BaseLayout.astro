@@ -2,187 +2,1474 @@
 import "../styles/global.css";
 import { ClientRouter } from "astro:transitions";
 import { games } from "../data/games";
+import { tools } from "../data/tools";
 
 type Props = {
   title?: string;
   description?: string;
+  isHome?: boolean;
 };
 
 const {
-  title = "ArchiveDex",
-  description = "Premium discovery archive for Pokémon fan projects.",
+  title = "ArchiveDex · Pokémon ROM Hack & Fan Game Archive",
+  description = "The definitive museum-grade archive and discovery launcher for Pokémon ROM hacks, fan games, and preservation projects.",
+  isHome = false,
 } = Astro.props;
 
 const currentPath = Astro.url.pathname;
-const entryCount  = games.length;
+const totalPlayableGames = games.length;
+const totalTools = tools.length;
+const completeCount = games.filter((g) => g.status === "Complete").length;
 
-const navLinks = [
-  { href: "/library",      label: "Library" },
-  { href: "/collections",  label: "Collections" },
-  { href: "/compare",      label: "Compare" },
-  { href: "/source-notes", label: "Source Notes" },
+const navItems = [
+  { href: "/", label: "Home", icon: "⌂" },
+  { href: "/library", label: "Library", icon: "📚" },
+  { href: "/collections", label: "Collections", icon: "🗂️" },
+  { href: "/compare", label: "Compare", icon: "⇄" },
+  { href: "/matchmaker", label: "Matchmaker", icon: "🎯" },
+  { href: "/tools", label: "Tools & Engines", icon: "🛠️" },
+  { href: "/source-notes", label: "Source Notes", icon: "📋" },
 ];
 
-const categoryNav = [
-  { label: "Essential",   cat: "Essential Collection" },
-  { label: "Must Play",   cat: "Must Play" },
-  { label: "Story",       cat: "Story Focused" },
-  { label: "Open World",  cat: "Open World" },
-  { label: "Roguelike",   cat: "Roguelike" },
-  { label: "Difficulty",  cat: "Difficulty" },
-  { label: "Fakemon",     cat: "Fakemon" },
-  { label: "Competitive", cat: "Competitive" },
-  { label: "Hidden Gems", cat: "Hidden Gem" },
+const categoryShortcuts = [
+  { label: "Essential Collection", cat: "Essential Collection", icon: "✦" },
+  { label: "Must Play", cat: "Must Play", icon: "◆" },
+  { label: "Story Focused", cat: "Story Focused", icon: "◈" },
+  { label: "Open World", cat: "Open World", icon: "⬡" },
+  { label: "Roguelike Runs", cat: "Roguelike", icon: "✧" },
+  { label: "Difficulty & Kaizo", cat: "Difficulty", icon: "⚔" },
+  { label: "Fakemon Worlds", cat: "Fakemon", icon: "★" },
+  { label: "Hidden Gems", cat: "Hidden Gem", icon: "💎" },
+];
+
+const topRatedMini = [...games].sort((a, b) => b.rating - a.rating).slice(0, 5);
+
+const latestUpdates = [
+  { id: "pokemon-emerald-seaglass", name: "Emerald Seaglass", ver: "v2.0", tag: "Mega Evolutions & Mining", date: "Recent" },
+  { id: "pokemon-unbound", name: "Pokémon Unbound", ver: "v2.1.1", tag: "Postgame & Frontier Fixes", date: "Stable" },
+  { id: "pokemon-emerald-rogue", name: "Emerald Rogue", ver: "v2.0 EX", tag: "Gen 9 Roster & HUB Overhaul", date: "Major" },
+  { id: "pokemon-radical-red", name: "Radical Red", ver: "v4.1", tag: "Paldea DLC Abilities & AI", date: "Update" },
+  { id: "lazarus", name: "Pokémon Lazarus", ver: "v1.2", tag: "Ilios 9-Starter Balance", date: "New" },
 ];
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="cosmic">
   <head>
     <meta charset="UTF-8" />
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     <ClientRouter />
+    <script is:inline>
+      // Synchronously apply themes before paint and persist through Astro page transitions
+      (function() {
+        function applySavedTheme() {
+          try {
+            const savedTheme = localStorage.getItem("archivedex_theme") || "cosmic";
+            document.documentElement.setAttribute("data-theme", savedTheme);
+            if (document.body) document.body.setAttribute("data-theme", savedTheme);
+
+            const savedCardTheme = localStorage.getItem("archivedex_card_theme") || "holo";
+            document.documentElement.setAttribute("data-card-theme", savedCardTheme);
+            if (document.body) document.body.setAttribute("data-card-theme", savedCardTheme);
+          } catch (e) {}
+        }
+        applySavedTheme();
+        document.addEventListener("astro:before-swap", applySavedTheme);
+        document.addEventListener("astro:after-swap", applySavedTheme);
+        document.addEventListener("astro:page-load", applySavedTheme);
+      })();
+    </script>
   </head>
 
-  <body class="min-h-screen archive-grid">
+  <body class="h-screen overflow-hidden flex flex-col text-slate-100 dot-matrix-grid antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
 
-    <!-- Top navigation progress bar (page transitions) -->
-    <div id="nav-progress" transition:persist="nav-progress"></div>
+    <!-- Top nav progress bar -->
+    <div id="nav-progress" class="fixed top-0 left-0 h-[2px] w-0 bg-gradient-to-r from-cyan-400 via-violet-400 to-amber-300 transition-all duration-300 z-[99999]" transition:persist="nav-progress"></div>
 
-    <!-- Toast notification stack -->
+    <!-- Toast Notification Stack -->
     <div id="toast-stack" aria-live="polite"></div>
 
-    <header class="sticky top-0 z-50 border-b border-slate-800/60 bg-[#070914]/90 backdrop-blur-xl" transition:persist="site-header">
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- TOP GLOBAL HEADER (FIXED PERSISTENT SHELL)      -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <header class="h-16 shrink-0 w-full z-30 flex items-center justify-between border-b border-white/[0.08] bg-[#111520]/95 px-4 sm:px-6 backdrop-blur-xl" transition:persist="main-header">
+      
+      <!-- Left: Mobile Toggle, Desktop Left Rail Toggle & Logo -->
+      <div class="flex items-center gap-3">
+        <!-- Mobile Drawer Hamburger -->
+        <button id="open-mobile-rail" aria-label="Open Navigation" class="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.12] bg-[#161B29] text-slate-300 md:hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
 
-      <!-- Primary nav -->
-      <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
+        <!-- Desktop Left Rail Toggle Button -->
+        <button
+          id="toggle-left-rail-btn"
+          title="Toggle Navigation Rail (⌘B / Ctrl+B)"
+          class="hidden md:flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#161B29] px-2.5 py-1.5 text-xs font-bold text-slate-300 transition hover:border-cyan-400/40 hover:bg-[#1E2538]"
+        >
+          <span class="text-xs">▤</span>
+          <span class="text-[11px] font-mono-spec">Rail</span>
+        </button>
 
         <!-- Logo -->
-        <a href="/" data-astro-prefetch class="flex items-center gap-3 group">
-          <div class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-cyan-400/40 bg-cyan-400/10 text-base font-black text-cyan-300 transition group-hover:bg-cyan-400/20 group-hover:glow-cyan">
-            A
+        <a href="/" class="flex items-center gap-2.5 group">
+          <div class="relative grid h-9 w-9 place-items-center rounded-xl border border-cyan-400/30 bg-cyan-500/10 text-cyan-300 transition-all group-hover:border-cyan-400/60 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.35)]">
+            <span class="text-lg">⬡</span>
+            <span class="absolute -top-1 -right-1 flex h-2 w-2">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75"></span>
+              <span class="relative inline-flex h-2 w-2 rounded-full bg-cyan-500"></span>
+            </span>
           </div>
           <div>
-            <div class="text-base font-black tracking-tight">
-              <span class="text-white">ARCHIVE</span><span class="text-cyan-300 text-glow-cyan">DEX</span>
+            <div class="text-sm font-black tracking-wider text-white">
+              ARCHIVE<span class="theme-accent-text">DEX</span>
             </div>
-            <div class="text-[10px] text-slate-600 leading-none">Fan Project Archive</div>
+            <div class="text-[9px] font-mono-spec tracking-widest text-slate-500 uppercase">
+              Museum Launcher
+            </div>
           </div>
         </a>
-
-        <!-- Center: desktop nav -->
-        <div class="hidden items-center gap-0.5 md:flex">
-          {navLinks.map(({ href, label }) => (
-            <a
-              href={href}
-              data-astro-prefetch
-              class={`nav-link-underline rounded-xl px-4 py-2 text-sm font-bold transition hover:bg-slate-800/80 hover:text-cyan-300 ${
-                currentPath === href || currentPath.startsWith(href + "/")
-                  ? "active bg-slate-800/70 text-cyan-300"
-                  : "text-slate-400"
-              }`}
-            >
-              {label}
-            </a>
-          ))}
-
-          <div class="mx-2 h-4 w-px bg-slate-700/80"></div>
-
-          <a
-            href="/random"
-            class="magnetic-btn flex items-center gap-1.5 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3.5 py-2 text-sm font-bold text-slate-400 transition hover:border-violet-400/50 hover:text-violet-300"
-          >
-            <span class="text-sm">🎲</span> Random
-          </a>
-        </div>
-
-        <!-- Right: entry count + mobile controls -->
-        <div class="flex items-center gap-3">
-          <span class="hidden rounded-full border border-slate-700/60 bg-slate-900/60 px-3 py-1 text-[11px] font-black text-slate-500 sm:inline-flex">
-            <span data-counter={entryCount} data-counter-duration="900">0</span> entries
-          </span>
-          <!-- Mobile controls -->
-          <div class="flex items-center gap-2 md:hidden">
-            <a href="/random" class="grid h-9 w-9 place-items-center rounded-xl border border-slate-700 bg-slate-900 text-sm transition hover:border-violet-400/50" title="Random game">🎲</a>
-            <button id="mobile-menu-btn" aria-label="Toggle menu" class="grid h-9 w-9 place-items-center rounded-xl border border-slate-700 bg-slate-900 transition hover:border-slate-600">
-              <svg id="icon-open" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              <svg id="icon-close" xmlns="http://www.w3.org/2000/svg" class="hidden h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      <!-- Secondary: category quick-nav -->
-      <div class="border-t border-slate-900/80">
-        <div class="mx-auto max-w-7xl px-6">
-          <div class="no-scrollbar flex items-center gap-1 overflow-x-auto py-2">
-            {categoryNav.map(({ label, cat }) => (
-              <a
-                href={`/library?category=${encodeURIComponent(cat)}`}
-                data-astro-prefetch
-                class="cat-nav-link shrink-0 rounded-full px-3 py-1 text-[11px] font-bold text-slate-500 transition hover:bg-slate-800/70 hover:text-slate-300"
-                data-cat={cat}
-              >
-                {label}
-              </a>
-            ))}
-          </div>
-        </div>
       </div>
 
-      <!-- Mobile dropdown -->
-      <div id="mobile-menu" class="hidden border-t border-slate-800 md:hidden">
-        <div class="mx-auto max-w-7xl space-y-1 px-6 py-3">
-          <a href="/" data-astro-prefetch class="block rounded-xl px-4 py-2.5 text-sm font-bold text-slate-300 transition hover:bg-slate-800 hover:text-cyan-300">Home</a>
-          {navLinks.map(({ href, label }) => (
-            <a href={href} data-astro-prefetch class="block rounded-xl px-4 py-2.5 text-sm font-bold text-slate-300 transition hover:bg-slate-800 hover:text-cyan-300">{label}</a>
-          ))}
-          <a href="/random" class="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-violet-300 transition hover:bg-slate-800">
-            <span>🎲</span> Random game
-          </a>
+      <!-- Center: Global Search Trigger (⌘K Spotlight) -->
+      <div class="flex items-center">
+        <button
+          id="cmd-k-trigger"
+          class="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-[#161B29] px-4 py-2 text-xs font-medium text-slate-400 transition hover:border-cyan-400/40 hover:text-slate-200"
+        >
+          <span class="text-slate-500">🔍</span>
+          <span class="hidden sm:inline">Search games, tags, creators…</span>
+          <span class="sm:hidden">Search…</span>
+          <span class="rounded bg-black/40 px-1.5 py-0.5 font-mono-spec text-[10px] font-bold text-slate-400 border border-white/[0.06]">
+            ⌘K
+          </span>
+        </button>
+      </div>
+
+      <!-- Right: Theme Switchers, Quick-Links & Rail Toggles -->
+      <div class="flex items-center gap-2 sm:gap-2.5">
+
+        <!-- Pokédex & Card Theme Switcher Dropdown -->
+        <div class="relative" id="theme-switcher-container">
+          <button
+            id="theme-dropdown-btn"
+            aria-label="Theme & Style Settings"
+            class="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#161B29] px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-white/[0.2] hover:bg-[#1E2538]"
+          >
+            <span class="flex items-center gap-1 shrink-0">
+              <span class="h-2.5 w-2.5 rounded-full" style="background-color: var(--accent-primary); box-shadow: 0 0 6px var(--accent-glow);"></span>
+              <span class="h-2 w-2 rounded-full" style="background-color: var(--accent-secondary); box-shadow: 0 0 6px var(--accent-secondary-glow);"></span>
+            </span>
+            <span id="theme-active-label" class="hidden sm:inline font-mono-spec text-[11px]">Cosmic Cyan</span>
+            <span class="text-[9px] text-slate-500">▼</span>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div
+            id="theme-menu"
+            class="absolute right-0 mt-2 hidden w-64 rounded-2xl border border-white/[0.12] bg-[#161B29] p-3 shadow-2xl backdrop-blur-2xl z-50 space-y-3"
+          >
+            <!-- Section 1: Pokédex Accent Colors -->
+            <div>
+              <div class="px-2 pb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 font-mono-spec">
+                Pokédex Color Palettes
+              </div>
+              <div class="space-y-1">
+                <button data-set-theme="cosmic" class="theme-option flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-bold text-slate-200 transition hover:bg-[#1E2538]">
+                  <div class="flex items-center gap-2.5">
+                    <span class="flex items-center gap-1 shrink-0">
+                      <span class="theme-swatch-dot h-3 w-3 rounded-full" style="background-color: #22d3ee !important; box-shadow: 0 0 6px rgba(34, 211, 238, 0.8) !important;"></span>
+                      <span class="theme-swatch-dot h-2.5 w-2.5 rounded-full" style="background-color: #a855f7 !important; box-shadow: 0 0 6px rgba(168, 85, 247, 0.8) !important;"></span>
+                    </span>
+                    <span>Cosmic Cyan & Violet</span>
+                  </div>
+                </button>
+                <button data-set-theme="atomic" class="theme-option flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-bold text-slate-200 transition hover:bg-[#1E2538]">
+                  <div class="flex items-center gap-2.5">
+                    <span class="flex items-center gap-1 shrink-0">
+                      <span class="theme-swatch-dot h-3 w-3 rounded-full" style="background-color: #a855f7 !important; box-shadow: 0 0 6px rgba(168, 85, 247, 0.8) !important;"></span>
+                      <span class="theme-swatch-dot h-2.5 w-2.5 rounded-full" style="background-color: #f43f5e !important; box-shadow: 0 0 6px rgba(244, 63, 94, 0.8) !important;"></span>
+                    </span>
+                    <span>Atomic Purple & Rose</span>
+                  </div>
+                </button>
+                <button data-set-theme="emerald" class="theme-option flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-bold text-slate-200 transition hover:bg-[#1E2538]">
+                  <div class="flex items-center gap-2.5">
+                    <span class="flex items-center gap-1 shrink-0">
+                      <span class="theme-swatch-dot h-3 w-3 rounded-full" style="background-color: #10b981 !important; box-shadow: 0 0 6px rgba(16, 185, 129, 0.8) !important;"></span>
+                      <span class="theme-swatch-dot h-2.5 w-2.5 rounded-full" style="background-color: #06b6d4 !important; box-shadow: 0 0 6px rgba(6, 182, 212, 0.8) !important;"></span>
+                    </span>
+                    <span>Emerald & Sky Teal</span>
+                  </div>
+                </button>
+                <button data-set-theme="firered" class="theme-option flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-bold text-slate-200 transition hover:bg-[#1E2538]">
+                  <div class="flex items-center gap-2.5">
+                    <span class="flex items-center gap-1 shrink-0">
+                      <span class="theme-swatch-dot h-3 w-3 rounded-full" style="background-color: #ef4444 !important; box-shadow: 0 0 6px rgba(239, 68, 68, 0.8) !important;"></span>
+                      <span class="theme-swatch-dot h-2.5 w-2.5 rounded-full" style="background-color: #f97316 !important; box-shadow: 0 0 6px rgba(249, 115, 22, 0.8) !important;"></span>
+                    </span>
+                    <span>FireRed & Amber</span>
+                  </div>
+                </button>
+                <button data-set-theme="gold" class="theme-option flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-bold text-slate-200 transition hover:bg-[#1E2538]">
+                  <div class="flex items-center gap-2.5">
+                    <span class="flex items-center gap-1 shrink-0">
+                      <span class="theme-swatch-dot h-3 w-3 rounded-full" style="background-color: #fbbf24 !important; box-shadow: 0 0 6px rgba(251, 191, 36, 0.8) !important;"></span>
+                      <span class="theme-swatch-dot h-2.5 w-2.5 rounded-full" style="background-color: #dbeafe !important; box-shadow: 0 0 6px rgba(219, 234, 254, 0.8) !important;"></span>
+                    </span>
+                    <span>Solar Gold & Silver</span>
+                  </div>
+                </button>
+                <button data-set-theme="sapphire" class="theme-option flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-bold text-slate-200 transition hover:bg-[#1E2538]">
+                  <div class="flex items-center gap-2.5">
+                    <span class="flex items-center gap-1 shrink-0">
+                      <span class="theme-swatch-dot h-3 w-3 rounded-full" style="background-color: #0ea5e9 !important; box-shadow: 0 0 6px rgba(14, 165, 233, 0.8) !important;"></span>
+                      <span class="theme-swatch-dot h-2.5 w-2.5 rounded-full" style="background-color: #14b8a6 !important; box-shadow: 0 0 6px rgba(20, 184, 166, 0.8) !important;"></span>
+                    </span>
+                    <span>Abyssal Sapphire & Aqua</span>
+                  </div>
+                </button>
+                <button data-set-theme="pokeball" class="theme-option flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-bold text-slate-200 transition hover:bg-[#1E2538]">
+                  <div class="flex items-center gap-2.5">
+                    <span class="flex items-center gap-1 shrink-0">
+                      <span class="theme-swatch-dot h-3 w-3 rounded-full" style="background-color: #f43f5e !important; box-shadow: 0 0 6px rgba(244, 63, 94, 0.8) !important;"></span>
+                      <span class="theme-swatch-dot h-2.5 w-2.5 rounded-full" style="background-color: #ffffff !important; box-shadow: 0 0 6px rgba(255, 255, 255, 0.8) !important;"></span>
+                    </span>
+                    <span>Pokéball Contrast</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 2: Card View Theme Presets -->
+            <div class="border-t border-white/[0.08] pt-2">
+              <div class="px-2 pb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 font-mono-spec">
+                Card View Style
+              </div>
+              <div class="space-y-1">
+                <button data-set-card-theme="holo" class="card-theme-option flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-bold text-slate-200 transition hover:bg-[#1E2538]">
+                  <div class="flex items-center gap-2">
+                    <span style="color: #22d3ee !important;">✦</span>
+                    <span>Holo Neo</span>
+                  </div>
+                  <span class="text-[10px] text-slate-500 font-mono-spec">Glass & Glow</span>
+                </button>
+                <button data-set-card-theme="retro" class="card-theme-option flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-bold text-slate-200 transition hover:bg-[#1E2538]">
+                  <div class="flex items-center gap-2">
+                    <span class="text-yellow-400">🕹️</span>
+                    <span>Retro Cartridge</span>
+                  </div>
+                  <span class="text-[10px] text-slate-500 font-mono-spec">Hardware Slate</span>
+                </button>
+                <button data-set-card-theme="monolith" class="card-theme-option flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-bold text-slate-200 transition hover:bg-[#1E2538]">
+                  <div class="flex items-center gap-2">
+                    <span class="text-white">⬛</span>
+                    <span>Monolith Obsidian</span>
+                  </div>
+                  <span class="text-[10px] text-slate-500 font-mono-spec">Minimal Vault</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- Pokéball Gacha Randomizer Trigger -->
+        <button
+          id="open-gacha-btn"
+          title="Pokéball Gacha Randomizer"
+          class="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#161B29] px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-amber-400/40 hover:text-amber-300"
+        >
+          <span class="text-sm">🎲</span>
+          <span class="hidden md:inline font-mono-spec text-[11px]">Gacha</span>
+        </button>
+
+        <!-- Watchlist Drawer Button -->
+        <button
+          id="open-watchlist-btn"
+          title="View Wishlist & Completed Vault"
+          class="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#161B29] px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-rose-400/40 hover:text-rose-300"
+        >
+          <span>♡</span>
+          <span class="hidden md:inline font-mono-spec text-[11px]">Watchlist</span>
+          <span id="watchlist-count-badge" class="rounded-full bg-rose-500/20 px-1.5 py-0.2 text-[10px] font-mono-spec font-bold text-rose-300">0</span>
+        </button>
+
+        <!-- Matchmaker Direct Link -->
+        <a
+          href="/matchmaker"
+          class="hidden xl:flex items-center gap-1.5 rounded-xl theme-pill px-3 py-2 text-xs font-black transition hover:opacity-90"
+        >
+          <span>🎯</span>
+          <span>Matchmaker</span>
+        </a>
+
+        <!-- Right Activity Rail Toggle -->
+        <button
+          id="toggle-right-rail-btn"
+          title="Toggle Right Activity Feed (Latest Updates & Top Rated)"
+          class="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#161B29] px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-cyan-400/40 hover:bg-[#1E2538]"
+        >
+          <span class="text-cyan-400 text-xs">⚡</span>
+          <span class="hidden sm:inline font-mono-spec text-[11px]">Activity</span>
+          <span id="right-rail-dot" class="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee] transition-all"></span>
+        </button>
+
       </div>
     </header>
 
-    <slot />
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- 3-COLUMN LAUNCHER SHELL (INDEPENDENT SCROLLS)   -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div class="flex flex-1 w-full overflow-hidden min-h-0 relative">
 
-    <footer class="mt-20 border-t border-slate-800/60">
-      <div class="mx-auto max-w-7xl px-6 py-8">
-        <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- COLUMN 1: LEFT RAIL (PERSISTENT NAV & VAULT)   -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <aside
+        id="launcher-sidebar"
+        class="h-full flex flex-col border-r border-white/[0.08] bg-[#111520] shrink-0 transition-all duration-300 z-40 fixed inset-y-0 left-0 -translate-x-full md:static md:translate-x-0 w-64 overflow-hidden select-none"
+      >
+        <!-- Rail Header with Collapse button -->
+        <div class="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.08] px-4">
+          <span class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 font-mono-spec">Navigation</span>
+          <button id="collapse-left-rail-btn" title="Collapse Rail (⌘B)" class="hidden md:flex items-center gap-1 text-[11px] font-mono-spec text-slate-400 hover:text-white rounded px-2 py-0.5 hover:bg-white/5 transition">
+            <span>◀</span>
+            <span class="text-[10px] font-bold">Collapse</span>
+          </button>
+          <button id="close-mobile-rail" class="grid h-7 w-7 place-items-center rounded-lg border border-slate-700 text-slate-400 md:hidden hover:text-white text-xs">✕</button>
+        </div>
+
+        <!-- Scrollable Navigation Area (Independent Scroll: Column 1 Only) -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar px-3 py-4 space-y-6">
+
+          <!-- Primary Navigation -->
           <div>
-            <div class="text-sm font-black">
-              <span class="text-white">ARCHIVE</span><span class="text-cyan-300">DEX</span>
+            <div class="px-3 pb-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 font-mono-spec">
+              Launcher Rail
             </div>
-            <p class="mt-1 text-xs text-slate-600">
-              A discovery and documentation project. Does not host ROMs or prepatched files.
-            </p>
+            <nav class="space-y-1">
+              {navItems.map((item) => {
+                const isActive =
+                  currentPath === item.href ||
+                  (item.href !== "/" && currentPath.startsWith(item.href)) ||
+                  (item.href === "/library" && currentPath.startsWith("/games"));
+                return (
+                  <a
+                    href={item.href}
+                    data-astro-prefetch
+                    class={`nav-item-link flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all ${
+                      isActive
+                        ? "theme-pill font-black shadow-[0_0_15px_var(--accent-glow)]"
+                        : "text-slate-400 hover:bg-[#1E2538] hover:text-white"
+                    }`}
+                  >
+                    <span class="text-base">{item.icon}</span>
+                    <span class="flex-1">{item.label}</span>
+                    {item.href === "/library" && (
+                      <span class="rounded bg-black/40 px-1.5 py-0.5 text-[10px] font-mono-spec text-slate-400">
+                        {totalPlayableGames}
+                      </span>
+                    )}
+                    {item.href === "/tools" && (
+                      <span class="rounded bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-mono-spec text-cyan-300">
+                        {totalTools}
+                      </span>
+                    )}
+                  </a>
+                );
+              })}
+            </nav>
           </div>
-          <span class="rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-[11px] font-black text-slate-600">
-            {entryCount} entries archived
-          </span>
+
+          <!-- Category Quick Links -->
+          <div>
+            <div class="px-3 pb-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 font-mono-spec">
+              Curated Routes
+            </div>
+            <div class="space-y-0.5">
+              {categoryShortcuts.map((cat) => (
+                <a
+                  href={`/library?category=${encodeURIComponent(cat.cat)}`}
+                  data-astro-prefetch
+                  class="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[11px] font-bold text-slate-400 transition hover:bg-[#1E2538] hover:text-cyan-300"
+                >
+                  <span class="text-xs text-slate-500">{cat.icon}</span>
+                  <span class="truncate">{cat.label}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <!-- Archive Status Vault Widget -->
+        <div class="border-t border-white/[0.08] bg-[#0c0f17] p-3.5">
+          <div class="rounded-xl border border-white/[0.08] bg-[#161B29] p-3 shadow-inner">
+            <div class="flex items-center justify-between pb-2">
+              <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono-spec">
+                Vault Status
+              </span>
+              <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black text-emerald-300">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Safe Patches
+              </span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-center pt-1 font-mono-spec">
+              <div class="rounded-lg bg-[#111520] p-1.5 border border-white/[0.04]">
+                <div class="text-sm font-black text-white">{totalPlayableGames}</div>
+                <div class="text-[9px] text-slate-500">Games</div>
+              </div>
+              <div class="rounded-lg bg-[#111520] p-1.5 border border-white/[0.04]">
+                <div class="text-sm font-black text-emerald-300">{completeCount}</div>
+                <div class="text-[9px] text-slate-500">Complete</div>
+              </div>
+            </div>
+
+            <div class="mt-2.5 flex items-center justify-between text-[10px] text-slate-500">
+              <span>Copyright Safety:</span>
+              <span class="font-bold text-slate-300">Zero ROMs</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Sidebar Overlay for mobile -->
+      <div id="mobile-rail-backdrop" class="fixed inset-0 z-30 hidden bg-black/70 backdrop-blur-sm md:hidden"></div>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- COLUMN 2: CENTER WORKSPACE (MAIN PAGE VIEW)     -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <main
+        id="main-scroll-container"
+        class="flex-1 h-full overflow-y-auto custom-scrollbar flex flex-col min-w-0 relative focus:outline-none"
+        tabindex="-1"
+      >
+        <!-- Primary Page Content (Independent Scroll: Column 2 Only) -->
+        <div class="flex-1 min-w-0">
+          <slot />
+        </div>
+
+        <!-- Global Launcher Footer pinned inside center scroll container -->
+        <footer class="border-t border-white/[0.08] bg-[#0c0f17] px-6 py-8 mt-12 shrink-0">
+          <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
+            <div>
+              <div class="text-sm font-black text-white">
+                ARCHIVE<span class="theme-accent-text">DEX</span> · Pokémon Preservation Project
+              </div>
+              <p class="mt-1 text-xs text-slate-500">
+                Non-commercial research index. All Pokémon trademarks belong to Nintendo, Game Freak, and The Pokémon Company.
+              </p>
+            </div>
+            <div class="flex items-center gap-4 text-xs font-mono-spec text-slate-400">
+              <a href="/tools" class="hover:text-cyan-300">Tools</a>
+              <span>·</span>
+              <a href="/source-notes" class="hover:text-cyan-300">Safety Policy</a>
+              <span>·</span>
+              <a href="/compare" class="hover:text-cyan-300">Compare</a>
+              <span>·</span>
+              <span class="text-slate-600">{totalPlayableGames} Games Indexed</span>
+            </div>
+          </div>
+        </footer>
+      </main>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- COLUMN 3: RIGHT ACTIVITY RAIL (LATEST & TOP)    -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <aside
+        id="home-right-rail"
+        class="h-full flex flex-col border-l border-white/[0.08] bg-[#111520] shrink-0 transition-all duration-300 z-30 w-80 overflow-hidden select-none"
+        transition:persist="home-right-rail"
+      >
+          <!-- Rail Header with Collapse button -->
+          <div class="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.08] px-4">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs">⚡</span>
+              <span class="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300 font-mono-spec">Activity Feed</span>
+            </div>
+            <button id="collapse-right-rail-btn" title="Hide Activity Rail" class="flex items-center gap-1 text-[11px] font-mono-spec text-slate-400 hover:text-white rounded px-2 py-0.5 hover:bg-white/5 transition">
+              <span class="text-[10px] font-bold">Hide</span>
+              <span>▸</span>
+            </button>
+          </div>
+
+          <!-- Rail Scrollable Content (Independent Scroll: Column 3 Only) -->
+          <div class="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+            
+            <!-- Feed 1: Latest Updates -->
+            <div>
+              <div class="flex items-center justify-between pb-3">
+                <span class="text-[11px] font-black uppercase tracking-wider text-cyan-300 font-mono-spec">
+                  ✦ Latest Updates
+                </span>
+                <span class="text-[10px] font-mono-spec text-slate-500">Live Patch Feed</span>
+              </div>
+              <div class="space-y-2">
+                {latestUpdates.map((item) => (
+                  <a
+                    href={`/games/${item.id}`}
+                    class="group block rounded-xl border border-white/[0.06] bg-[#161B29] p-3 transition hover:border-cyan-400/40 hover:bg-[#1E2538]"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span class="truncate text-xs font-black text-white group-hover:text-cyan-200">
+                        {item.name}
+                      </span>
+                      <span class="rounded bg-cyan-400/10 px-1.5 py-0.5 text-[9px] font-mono-spec font-bold text-cyan-300">
+                        {item.ver}
+                      </span>
+                    </div>
+                    <p class="mt-1 text-[11px] text-slate-400 clamp-1 leading-snug">
+                      {item.tag}
+                    </p>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <!-- Feed 2: Top Rated Hall of Fame -->
+            <div>
+              <div class="flex items-center justify-between pb-3">
+                <span class="text-[11px] font-black uppercase tracking-wider text-yellow-300 font-mono-spec">
+                  ⭐ Top Rated Archive
+                </span>
+                <a href="/library" class="text-[10px] font-mono-spec text-slate-400 hover:text-white">All →</a>
+              </div>
+              <div class="space-y-2">
+                {topRatedMini.map((game, i) => (
+                  <a
+                    href={`/games/${game.id}`}
+                    class="flex items-center justify-between rounded-xl border border-white/[0.06] bg-[#161B29] p-2.5 transition hover:border-yellow-400/30 hover:bg-[#1E2538]"
+                  >
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <span class="font-mono-spec text-xs font-black text-slate-600">#{i + 1}</span>
+                      <div class="min-w-0">
+                        <div class="truncate text-xs font-black text-white">{game.name}</div>
+                        <div class="text-[10px] text-slate-500">{game.runtime} · {game.base}</div>
+                      </div>
+                    </div>
+                    <span class="shrink-0 rounded-lg border border-yellow-400/20 bg-yellow-400/10 px-2 py-0.5 font-mono-spec text-xs font-bold text-yellow-300">
+                      {game.rating}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <!-- Quick Preservation Policy Card -->
+            <div class="rounded-2xl border border-white/[0.08] bg-[#0c0f17] p-4 text-[11px] leading-relaxed text-slate-400">
+              <div class="font-black text-slate-200 mb-1 flex items-center gap-1.5">
+                <span>🛡️</span> Museum Preservation
+              </div>
+              ArchiveDex preserves documentation, patch hashes, and base requirements. We do not distribute copyrighted ROM files.
+            </div>
+
+          </div>
+        </aside>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- GLOBAL COMMAND PALETTE (⌘K / Ctrl+K)            -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="cmd-k-modal" class="fixed inset-0 z-50 hidden flex-items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div class="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/[0.14] bg-[#161B29] shadow-2xl">
+        <!-- Search Input Bar -->
+        <div class="flex items-center border-b border-white/[0.08] px-4 py-3.5">
+          <span class="text-lg text-slate-400 mr-3">🔍</span>
+          <input
+            id="cmd-k-input"
+            type="text"
+            placeholder="Search games, creators, tags (#kaizo, #gen8, #following), or tools…"
+            autocomplete="off"
+            class="w-full bg-transparent text-sm font-medium text-white placeholder-slate-500 outline-none"
+          />
+          <kbd class="rounded border border-white/[0.1] bg-[#111520] px-2 py-0.5 text-[10px] font-mono-spec text-slate-400">ESC</kbd>
+        </div>
+
+        <!-- Search Results List -->
+        <div id="cmd-k-results" class="max-h-[60vh] overflow-y-auto p-2 space-y-1">
+          <div class="p-4 text-center text-xs text-slate-500 font-mono-spec">
+            Type to search across 632 Pokémon games and developer tools…
+          </div>
+        </div>
+
+        <!-- Command Palette Footer Navigation Hints -->
+        <div class="flex items-center justify-between border-t border-white/[0.08] bg-[#111520] px-4 py-2.5 text-[11px] font-mono-spec text-slate-500">
+          <div class="flex items-center gap-3">
+            <span><kbd class="rounded bg-black/40 px-1 text-slate-400">↑↓</kbd> Navigate</span>
+            <span><kbd class="rounded bg-black/40 px-1 text-slate-400">↵</kbd> Select</span>
+          </div>
+          <span>ArchiveDex Spotlight</span>
         </div>
       </div>
-    </footer>
+    </div>
 
-    <style>
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- POKÉBALL GACHA RANDOMIZER MODAL                -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="gacha-modal" class="fixed inset-0 z-50 hidden flex-items-center justify-center p-4 bg-black/85 backdrop-blur-lg">
+      <div class="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/[0.12] bg-[#161B29] p-6 shadow-2xl text-center">
+        <!-- Close Button -->
+        <button id="close-gacha-btn" class="absolute top-4 right-4 rounded-xl border border-white/[0.08] bg-[#111520] p-1.5 text-xs text-slate-400 hover:text-white">✕</button>
 
+        <!-- Header -->
+        <div class="mb-4">
+          <div class="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-300 font-mono-spec">
+            ✦ Pokéball Gacha Randomizer
+          </div>
+          <h2 class="mt-2 text-2xl font-black text-white">Roll a Project</h2>
+          <p class="text-xs text-slate-400">Spin the Pokéball vault with lockable constraints.</p>
+        </div>
+
+        <!-- Lockable Constraints -->
+        <div class="mb-6 flex flex-wrap justify-center gap-2">
+          <button id="gacha-lock-gba" class="gacha-pill rounded-full border border-white/[0.1] bg-[#111520] px-3 py-1 text-xs font-bold text-slate-400 transition hover:border-cyan-400/50">
+            🔒 GBA Only
+          </button>
+          <button id="gacha-lock-complete" class="gacha-pill rounded-full border border-white/[0.1] bg-[#111520] px-3 py-1 text-xs font-bold text-slate-400 transition hover:border-emerald-400/50">
+            🔒 Complete Only
+          </button>
+          <button id="gacha-lock-rated" class="gacha-pill rounded-full border border-white/[0.1] bg-[#111520] px-3 py-1 text-xs font-bold text-slate-400 transition hover:border-yellow-400/50">
+            🔒 Rating 9.0+
+          </button>
+        </div>
+
+        <!-- Pokéball Animation Container -->
+        <div id="gacha-stage" class="relative my-6 flex flex-col items-center justify-center">
+          <!-- Pokéball SVG graphic -->
+          <div id="gacha-ball" class="relative h-28 w-28 cursor-pointer select-none transition-transform hover:scale-105">
+            <svg viewBox="0 0 100 100" class="h-full w-full drop-shadow-[0_10px_25px_rgba(0,0,0,0.6)]">
+              <!-- Top Red Half -->
+              <path d="M 5,50 A 45,45 0 0,1 95,50 Z" fill="#ef4444" stroke="#000" stroke-width="4"/>
+              <!-- Bottom White Half -->
+              <path d="M 5,50 A 45,45 0 0,0 95,50 Z" fill="#ffffff" stroke="#000" stroke-width="4"/>
+              <!-- Center Black Band -->
+              <line x1="5" y1="50" x2="95" y2="50" stroke="#000" stroke-width="8"/>
+              <!-- Center Button Outer -->
+              <circle cx="50" cy="50" r="14" fill="#000"/>
+              <!-- Center Button Inner -->
+              <circle cx="50" cy="50" r="8" fill="#ffffff"/>
+              <!-- Center Light Glow -->
+              <circle id="gacha-core" cx="50" cy="50" r="4" fill="#67e8f9" class="animate-pulse"/>
+            </svg>
+          </div>
+          <p id="gacha-status-msg" class="mt-3 text-xs font-mono-spec text-slate-400">Click the Pokéball or tap Spin below!</p>
+        </div>
+
+        <!-- Unveiled Game Result Card (initially hidden) -->
+        <div id="gacha-result" class="hidden text-left rounded-2xl border border-white/[0.12] bg-[#111520] p-4 mb-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <span id="gacha-result-runtime" class="rounded bg-cyan-500/10 px-2 py-0.5 text-[10px] font-mono-spec font-bold text-cyan-300">GBA</span>
+              <h3 id="gacha-result-name" class="mt-1 text-lg font-black text-white hover:text-cyan-200">Game Title</h3>
+              <p id="gacha-result-base" class="text-xs text-slate-500">FireRed · Complete</p>
+            </div>
+            <div id="gacha-result-rating" class="rounded-xl border border-yellow-400/30 bg-yellow-400/10 px-2.5 py-1 text-sm font-mono-spec font-black text-yellow-300">
+              9.8
+            </div>
+          </div>
+          <p id="gacha-result-desc" class="mt-2 text-xs text-slate-300 clamp-2">Description</p>
+          <a id="gacha-result-link" href="#" class="mt-3 block text-center rounded-xl bg-cyan-400 py-2 text-xs font-black text-slate-950 transition hover:bg-cyan-300">
+            Open Game Record →
+          </a>
+        </div>
+
+        <!-- Spin Action Button -->
+        <button id="spin-gacha-btn" class="w-full rounded-2xl bg-gradient-to-r from-amber-400 via-rose-400 to-cyan-400 py-3.5 text-sm font-black text-slate-950 shadow-lg transition hover:brightness-110 active:scale-95">
+          ⚡ SPIN GACHA VAULT
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- WATCHLIST & COMPLETED VAULT MODAL              -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="watchlist-modal" class="fixed inset-0 z-50 hidden flex-items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div class="relative w-full max-w-xl overflow-hidden rounded-2xl border border-white/[0.12] bg-[#161B29] p-6 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-white/[0.08] pb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-rose-400 text-lg">♡</span>
+            <h2 class="text-lg font-black text-white">Your Saved Collection</h2>
+          </div>
+          <button id="close-watchlist-btn" class="rounded-lg border border-white/[0.08] px-2 py-1 text-xs text-slate-400 hover:text-white">✕</button>
+        </div>
+
+        <div class="mt-4 flex gap-2 border-b border-white/[0.08] pb-3 text-xs font-bold">
+          <button id="watchlist-tab-wish" class="rounded-lg bg-rose-500/20 px-3 py-1.5 text-rose-300">Wishlist (<span id="wishlist-tab-count">0</span>)</button>
+          <button id="watchlist-tab-done" class="rounded-lg bg-[#111520] px-3 py-1.5 text-slate-400 hover:text-white">Completed (<span id="done-tab-count">0</span>)</button>
+        </div>
+
+        <div id="watchlist-items-list" class="max-h-[50vh] overflow-y-auto py-3 space-y-2">
+          <!-- Generated via JS -->
+          <div class="p-8 text-center text-xs text-slate-500">
+            No games in your wishlist yet. Click ♡ on any game card to track it!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- FLOATING COMPARE DOCK (UP TO 4 GAMES)          -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="compare-dock" class="fixed bottom-0 inset-x-0 z-40 hidden border-t border-white/[0.12] bg-[#111520]/95 px-6 py-3.5 backdrop-blur-2xl shadow-[0_-10px_35px_rgba(0,0,0,0.6)]">
+      <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
+        
+        <div class="flex items-center gap-3 overflow-x-auto min-w-0">
+          <div class="flex items-center gap-1.5 shrink-0 text-xs font-mono-spec font-bold text-slate-400">
+            <span class="text-cyan-300">⇄</span> Compare Dock <span id="dock-count-badge" class="rounded bg-cyan-500/20 px-1 text-cyan-300">0/4</span>:
+          </div>
+          <div id="dock-chips-container" class="flex items-center gap-2">
+            <!-- Dynamically populated up to 4 games -->
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="dock-clear-btn" class="rounded-xl border border-white/[0.08] px-3 py-1.5 text-xs font-bold text-slate-400 transition hover:border-red-400/40 hover:text-red-300">
+            Clear
+          </button>
+          <a id="dock-compare-btn" href="/compare" class="rounded-xl bg-cyan-400 px-4 py-1.5 text-xs font-black text-slate-950 transition hover:bg-cyan-300">
+            Compare Side-by-Side →
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- CORE SCRIPT: THEMES, MODALS, STATE, SPOTLIGHT  -->
+    <!-- ═══════════════════════════════════════════════ -->
     <script>
-      // ════════════════════════════════════════════════════════
-      // ArchiveDex shared client runtime
-      // Re-initialized on every load AND every ClientRouter
-      // transition via the astro:page-load event.
-      // ════════════════════════════════════════════════════════
+      // ── Pokédex & Card Theme Switcher ───────────────
+      function initThemeSwitcher() {
+        const themeBtn = document.getElementById("theme-dropdown-btn");
+        const themeMenu = document.getElementById("theme-menu");
+        const labelEl = document.getElementById("theme-active-label");
 
-      // ── Toasts ─────────────────────────────────────────────
+        const themeLabels: Record<string, string> = {
+          cosmic: "Cosmic Cyan & Violet",
+          atomic: "Atomic Purple & Rose",
+          emerald: "Emerald & Sky Teal",
+          firered: "FireRed & Amber",
+          gold: "Solar Gold & Silver",
+          sapphire: "Abyssal Sapphire & Aqua",
+          pokeball: "Pokéball Contrast",
+        };
+
+        const cardThemeLabels: Record<string, string> = {
+          holo: "Holo Neo",
+          retro: "Retro Cartridge",
+          monolith: "Monolith Obsidian",
+        };
+
+        function updateThemeOptionsUI(theme: string) {
+          if (labelEl) labelEl.textContent = themeLabels[theme] || "Theme";
+          document.querySelectorAll<HTMLButtonElement>(".theme-option").forEach((btn) => {
+            const isActive = btn.dataset.setTheme === theme;
+            btn.classList.toggle("bg-white/10", isActive);
+            btn.classList.toggle("ring-1", isActive);
+            btn.classList.toggle("ring-white/20", isActive);
+          });
+        }
+
+        function updateCardThemeUI(cardTheme: string) {
+          document.querySelectorAll<HTMLButtonElement>(".card-theme-option").forEach((btn) => {
+            const isActive = btn.dataset.setCardTheme === cardTheme;
+            btn.classList.toggle("bg-white/10", isActive);
+            btn.classList.toggle("border-cyan-400/40", isActive);
+          });
+        }
+
+        const currentTheme = localStorage.getItem("archivedex_theme") || "cosmic";
+        updateThemeOptionsUI(currentTheme);
+
+        const currentCardTheme = localStorage.getItem("archivedex_card_theme") || "holo";
+        updateCardThemeUI(currentCardTheme);
+
+        if (themeBtn) {
+          themeBtn.onclick = (e) => {
+            e.stopPropagation();
+            themeMenu?.classList.toggle("hidden");
+          };
+        }
+
+        // Pokédex hue options
+        document.querySelectorAll<HTMLButtonElement>(".theme-option").forEach((btn) => {
+          btn.onclick = () => {
+            const theme = btn.dataset.setTheme || "cosmic";
+            document.documentElement.setAttribute("data-theme", theme);
+            document.body.setAttribute("data-theme", theme);
+            localStorage.setItem("archivedex_theme", theme);
+            updateThemeOptionsUI(theme);
+            themeMenu?.classList.add("hidden");
+            (window as any).showToast?.(`Pokédex theme set to ${themeLabels[theme]}`, "info");
+          };
+        });
+
+        // Card view theme options
+        document.querySelectorAll<HTMLButtonElement>(".card-theme-option").forEach((btn) => {
+          btn.onclick = () => {
+            const theme = btn.dataset.setCardTheme || "holo";
+            document.documentElement.setAttribute("data-card-theme", theme);
+            document.body.setAttribute("data-card-theme", theme);
+            localStorage.setItem("archivedex_card_theme", theme);
+            updateCardThemeUI(theme);
+            themeMenu?.classList.add("hidden");
+            window.dispatchEvent(new CustomEvent("archivedex:card-theme-change", { detail: { theme } }));
+            (window as any).showToast?.(`Card style set to ${cardThemeLabels[theme] || theme}`, "info");
+          };
+        });
+
+        if (!(window as any).__themeMenuDocBound) {
+          (window as any).__themeMenuDocBound = true;
+          document.addEventListener("click", () => {
+            document.getElementById("theme-menu")?.classList.add("hidden");
+          });
+        }
+      }
+
+      // ── Left Rail Collapse & Mobile Drawer ───────────
+      function initLeftRail() {
+        const sidebar = document.getElementById("launcher-sidebar");
+        const toggleBtn = document.getElementById("toggle-left-rail-btn");
+        const collapseBtn = document.getElementById("collapse-left-rail-btn");
+        const openMobileBtn = document.getElementById("open-mobile-rail");
+        const closeMobileBtn = document.getElementById("close-mobile-rail");
+        const backdrop = document.getElementById("mobile-rail-backdrop");
+
+        function openMobile() {
+          const rail = document.getElementById("launcher-sidebar");
+          rail?.classList.remove("-translate-x-full");
+          backdrop?.classList.remove("hidden");
+        }
+        function closeMobile() {
+          const rail = document.getElementById("launcher-sidebar");
+          rail?.classList.add("-translate-x-full");
+          backdrop?.classList.add("hidden");
+        }
+
+        if (openMobileBtn) openMobileBtn.onclick = openMobile;
+        if (closeMobileBtn) closeMobileBtn.onclick = closeMobile;
+        if (backdrop) backdrop.onclick = closeMobile;
+
+        // Desktop collapse state from localStorage
+        const savedCollapsed = localStorage.getItem("archivedex_left_rail_collapsed");
+        if (savedCollapsed === "true" && sidebar) {
+          sidebar.classList.add("is-collapsed");
+        }
+
+        function toggleDesktopCollapse() {
+          const rail = document.getElementById("launcher-sidebar");
+          if (!rail) return;
+          const isCollapsed = rail.classList.toggle("is-collapsed");
+          localStorage.setItem("archivedex_left_rail_collapsed", isCollapsed ? "true" : "false");
+          (window as any).showToast?.(isCollapsed ? "Launcher Rail collapsed (⌘B)" : "Launcher Rail expanded (⌘B)", "info");
+        }
+
+        if (toggleBtn) {
+          toggleBtn.onclick = (e) => {
+            e.stopPropagation();
+            const rail = document.getElementById("launcher-sidebar");
+            if (window.innerWidth < 768) {
+              rail?.classList.contains("-translate-x-full") ? openMobile() : closeMobile();
+            } else {
+              toggleDesktopCollapse();
+            }
+          };
+        }
+
+        if (collapseBtn) {
+          collapseBtn.onclick = (e) => {
+            e.stopPropagation();
+            toggleDesktopCollapse();
+          };
+        }
+
+        // Keyboard shortcut: ⌘B or Ctrl+B bound once globally
+        if (!(window as any).__leftRailShortcutBound) {
+          (window as any).__leftRailShortcutBound = true;
+          document.addEventListener("keydown", (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+              e.preventDefault();
+              const rail = document.getElementById("launcher-sidebar");
+              if (window.innerWidth < 768) {
+                rail?.classList.contains("-translate-x-full") ? openMobile() : closeMobile();
+              } else {
+                toggleDesktopCollapse();
+              }
+            }
+          });
+        }
+      }
+
+      // ── Dynamic Route Navigation Highlight ─────────────
+      function updateActiveNav() {
+        const path = window.location.pathname.replace(/\/$/, "") || "/";
+        const navLinks = document.querySelectorAll<HTMLAnchorElement>("#launcher-sidebar nav a.nav-item-link");
+        navLinks.forEach((a) => {
+          const href = a.getAttribute("href")?.replace(/\/$/, "") || "/";
+          let isActive = false;
+          if (href === "/") {
+            isActive = path === "/";
+          } else if (href === "/library") {
+            isActive = path === "/library" || path.startsWith("/games");
+          } else {
+            isActive = path === href || path.startsWith(href);
+          }
+
+          if (isActive) {
+            a.classList.add("theme-pill", "font-black", "shadow-[0_0_15px_var(--accent-glow)]");
+            a.classList.remove("text-slate-400", "hover:bg-[#1E2538]", "hover:text-white");
+            a.setAttribute("aria-current", "page");
+          } else {
+            a.classList.remove("theme-pill", "font-black", "shadow-[0_0_15px_var(--accent-glow)]");
+            a.classList.add("text-slate-400", "hover:bg-[#1E2538]", "hover:text-white");
+            a.removeAttribute("aria-current");
+          }
+        });
+
+        // Also highlight curated category route if search param matches
+        const currentCategory = new URLSearchParams(window.location.search).get("category");
+        document.querySelectorAll<HTMLAnchorElement>("#launcher-sidebar a[href*='category=']").forEach((a) => {
+          const url = new URL(a.href, window.location.origin);
+          const cat = url.searchParams.get("category");
+          if (currentCategory && cat && currentCategory === cat) {
+            a.classList.add("bg-[#1E2538]", "text-cyan-300", "font-black");
+            a.classList.remove("text-slate-400");
+          } else {
+            a.classList.remove("bg-[#1E2538]", "text-cyan-300", "font-black");
+            a.classList.add("text-slate-400");
+          }
+        });
+      }
+      (window as any).updateActiveNav = updateActiveNav;
+
+      // ── Right Activity Rail (Wide Screen Default & Collapse) ──
+      function initRightRail() {
+        const rightRail = document.getElementById("home-right-rail");
+        const toggleBtn = document.getElementById("toggle-right-rail-btn");
+        const collapseBtn = document.getElementById("collapse-right-rail-btn");
+        const dot = document.getElementById("right-rail-dot");
+
+        if (!rightRail) return;
+
+        // Wide-screen default logic:
+        // >= 1440px resolution on Home defaults to 3-column mode (Right Rail open)
+        // Interior pages default to collapsed to maximize workspace
+        const savedState = localStorage.getItem("archivedex_right_rail_state");
+        let shouldBeOpen = false;
+
+        const isHome = window.location.pathname === "/" || window.location.pathname === "";
+        if (savedState === "open") {
+          shouldBeOpen = true;
+        } else if (savedState === "collapsed") {
+          shouldBeOpen = false;
+        } else {
+          shouldBeOpen = isHome && window.innerWidth >= 1440;
+        }
+
+        function applyRightRailState(open: boolean) {
+          const rail = document.getElementById("home-right-rail");
+          const d = document.getElementById("right-rail-dot");
+          if (!rail) return;
+          if (open) {
+            rail.classList.remove("is-collapsed");
+            d?.classList.remove("bg-slate-600", "shadow-none");
+            d?.classList.add("bg-cyan-400", "shadow-[0_0_8px_#22d3ee]");
+          } else {
+            rail.classList.add("is-collapsed");
+            d?.classList.remove("bg-cyan-400", "shadow-[0_0_8px_#22d3ee]");
+            d?.classList.add("bg-slate-600", "shadow-none");
+          }
+        }
+
+        applyRightRailState(shouldBeOpen);
+
+        function toggleRightRail() {
+          const rail = document.getElementById("home-right-rail");
+          if (!rail) return;
+          const isCurrentlyCollapsed = rail.classList.contains("is-collapsed");
+          const nextOpen = isCurrentlyCollapsed; // if collapsed, next is open
+          applyRightRailState(nextOpen);
+          localStorage.setItem("archivedex_right_rail_state", nextOpen ? "open" : "collapsed");
+          (window as any).showToast?.(nextOpen ? "Activity Feed expanded" : "Activity Feed collapsed", "info");
+        }
+
+        // Direct property assignment prevents duplicate listener stacking
+        if (toggleBtn) {
+          toggleBtn.onclick = (e) => {
+            e.stopPropagation();
+            toggleRightRail();
+          };
+        }
+        if (collapseBtn) {
+          collapseBtn.onclick = (e) => {
+            e.stopPropagation();
+            toggleRightRail();
+          };
+        }
+
+        // Responsive resize listener: bound only once globally
+        if (!(window as any).__rightRailResizeBound) {
+          (window as any).__rightRailResizeBound = true;
+          window.addEventListener("resize", () => {
+            if (!localStorage.getItem("archivedex_right_rail_state")) {
+              const onHome = window.location.pathname === "/" || window.location.pathname === "";
+              applyRightRailState(onHome && window.innerWidth >= 1440);
+            }
+          });
+        }
+      }
+      (window as any).initRightRail = initRightRail;
+      (window as any).initLeftRail = initLeftRail;
+
+      // ── Command Palette (⌘K) ─────────────────────────
+      let cachedGamesList: any[] = [];
+      async function getGamesList() {
+        if (!cachedGamesList.length) {
+          try {
+            cachedGamesList = await fetch("/data/games.json").then((r) => r.json());
+          } catch (e) {
+            cachedGamesList = [];
+          }
+        }
+        return cachedGamesList;
+      }
+
+      function initCommandPalette() {
+        const modal = document.getElementById("cmd-k-modal");
+        const trigger = document.getElementById("cmd-k-trigger");
+        const input = document.getElementById("cmd-k-input") as HTMLInputElement;
+        const results = document.getElementById("cmd-k-results");
+
+        function open() {
+          modal?.classList.remove("hidden");
+          modal?.classList.add("flex");
+          input?.focus();
+          getGamesList();
+        }
+        function close() {
+          modal?.classList.add("hidden");
+          modal?.classList.remove("flex");
+          if (input) input.value = "";
+        }
+
+        trigger?.addEventListener("click", open);
+
+        document.addEventListener("keydown", (e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+            e.preventDefault();
+            modal?.classList.contains("hidden") ? open() : close();
+          }
+          if (e.key === "Escape" && !modal?.classList.contains("hidden")) {
+            close();
+          }
+        });
+
+        modal?.addEventListener("click", (e) => {
+          if (e.target === modal) close();
+        });
+
+        let currentMatches: any[] = [];
+        let activeIndex = 0;
+
+        function updateSelection() {
+          if (!results) return;
+          const items = results.querySelectorAll<HTMLAnchorElement>(".cmd-k-item");
+          items.forEach((item, idx) => {
+            if (idx === activeIndex) {
+              item.classList.add("bg-[#1E2538]", "border-cyan-400/40");
+              item.classList.remove("border-transparent");
+              item.scrollIntoView({ block: "nearest" });
+            } else {
+              item.classList.remove("bg-[#1E2538]", "border-cyan-400/40");
+              item.classList.add("border-transparent");
+            }
+          });
+        }
+
+        input?.addEventListener("keydown", (e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            if (currentMatches.length > 0) {
+              activeIndex = (activeIndex + 1) % currentMatches.length;
+              updateSelection();
+            }
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            if (currentMatches.length > 0) {
+              activeIndex = (activeIndex - 1 + currentMatches.length) % currentMatches.length;
+              updateSelection();
+            }
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            if (currentMatches.length > 0 && currentMatches[activeIndex]) {
+              window.location.href = `/games/${currentMatches[activeIndex].id}`;
+            }
+          }
+        });
+
+        input?.addEventListener("input", async () => {
+          const q = input.value.toLowerCase().trim();
+          if (!q) {
+            currentMatches = [];
+            activeIndex = 0;
+            if (results) results.innerHTML = `<div class="p-4 text-center text-xs text-slate-500 font-mono-spec">Type to search across 632 Pokémon games and developer tools…</div>`;
+            return;
+          }
+
+          const games = await getGamesList();
+          const matches = games.filter((g: any) =>
+            g.name.toLowerCase().includes(q) ||
+            g.creator.toLowerCase().includes(q) ||
+            g.tags.some((t: string) => t.toLowerCase().includes(q.replace("#", ""))) ||
+            g.category.toLowerCase().includes(q)
+          ).slice(0, 8);
+
+          currentMatches = matches;
+          activeIndex = 0;
+
+          if (!matches.length) {
+            if (results) results.innerHTML = `<div class="p-6 text-center text-xs text-slate-500 font-mono-spec">No matches for "${q}"</div>`;
+            return;
+          }
+
+          if (results) {
+            results.innerHTML = matches.map((g: any, i: number) => `
+              <a href="/games/${g.id}" class="cmd-k-item border flex items-center justify-between rounded-xl px-3 py-2.5 transition group ${i === 0 ? "bg-[#1E2538] border-cyan-400/40" : "border-transparent hover:bg-[#1E2538]"}">
+                <div class="flex items-center gap-3">
+                  <span class="rounded bg-black/40 px-1.5 py-0.5 text-[10px] font-mono-spec font-bold text-cyan-300">${g.runtime}</span>
+                  <div>
+                    <div class="text-xs font-bold text-white group-hover:text-cyan-200">${g.name}</div>
+                    <div class="text-[10px] text-slate-500">${g.creator || "Community"} · ${g.category}</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-mono-spec text-yellow-300 font-bold">${g.rating}</span>
+                  <span class="text-xs text-slate-600">→</span>
+                </div>
+              </a>
+            `).join("");
+          }
+        });
+      }
+
+      // ── Pokéball Gacha Randomizer ────────────────────
+      function initGacha() {
+        const modal = document.getElementById("gacha-modal");
+        const openBtn = document.getElementById("open-gacha-btn");
+        const closeBtn = document.getElementById("close-gacha-btn");
+        const spinBtn = document.getElementById("spin-gacha-btn");
+        const ball = document.getElementById("gacha-ball");
+        const statusMsg = document.getElementById("gacha-status-msg");
+        const resultCard = document.getElementById("gacha-result");
+
+        let lockGBA = false;
+        let lockComplete = false;
+        let lockRated = false;
+
+        const gbaBtn = document.getElementById("gacha-lock-gba");
+        const completeBtn = document.getElementById("gacha-lock-complete");
+        const ratedBtn = document.getElementById("gacha-lock-rated");
+
+        function togglePill(btn: HTMLElement | null, active: boolean, label: string) {
+          if (!btn) return;
+          btn.classList.toggle("bg-cyan-500/20", active);
+          btn.classList.toggle("border-cyan-400", active);
+          btn.classList.toggle("text-cyan-200", active);
+        }
+
+        gbaBtn?.addEventListener("click", () => {
+          lockGBA = !lockGBA;
+          togglePill(gbaBtn, lockGBA, "GBA Only");
+        });
+        completeBtn?.addEventListener("click", () => {
+          lockComplete = !lockComplete;
+          togglePill(completeBtn, lockComplete, "Complete Only");
+        });
+        ratedBtn?.addEventListener("click", () => {
+          lockRated = !lockRated;
+          togglePill(ratedBtn, lockRated, "Rating 9.0+");
+        });
+
+        function open() {
+          modal?.classList.remove("hidden");
+          modal?.classList.add("flex");
+          getGamesList();
+        }
+        function close() {
+          modal?.classList.add("hidden");
+          modal?.classList.remove("flex");
+        }
+
+        openBtn?.addEventListener("click", open);
+        closeBtn?.addEventListener("click", close);
+        modal?.addEventListener("click", (e) => {
+          if (e.target === modal) close();
+        });
+
+        async function roll() {
+          const list = await getGamesList();
+          let pool = list;
+          if (lockGBA) pool = pool.filter((g: any) => g.runtime === "GBA");
+          if (lockComplete) pool = pool.filter((g: any) => g.status === "Complete");
+          if (lockRated) pool = pool.filter((g: any) => g.rating >= 9.0);
+
+          if (!pool.length) {
+            if (statusMsg) statusMsg.textContent = "No games matched constraints. Relax filters!";
+            return;
+          }
+
+          ball?.classList.add("animate-pokeball-shake");
+          if (statusMsg) statusMsg.textContent = "Shaking Pokéball vault…";
+          resultCard?.classList.add("hidden");
+
+          setTimeout(() => {
+            ball?.classList.remove("animate-pokeball-shake");
+            ball?.classList.add("animate-pokeball-pop");
+
+            const pick = pool[Math.floor(Math.random() * pool.length)];
+
+            setTimeout(() => {
+              ball?.classList.remove("animate-pokeball-pop");
+              if (statusMsg) statusMsg.textContent = "Gotcha! Project captured:";
+              if (resultCard) {
+                resultCard.classList.remove("hidden");
+                (document.getElementById("gacha-result-runtime") as HTMLElement).textContent = pick.runtime;
+                (document.getElementById("gacha-result-name") as HTMLElement).textContent = pick.name;
+                (document.getElementById("gacha-result-base") as HTMLElement).textContent = `${pick.base} · ${pick.status} · ${pick.category}`;
+                (document.getElementById("gacha-result-desc") as HTMLElement).textContent = pick.description;
+                (document.getElementById("gacha-result-rating") as HTMLElement).textContent = String(pick.rating);
+                (document.getElementById("gacha-result-link") as HTMLAnchorElement).href = `/games/${pick.id}`;
+              }
+            }, 500);
+          }, 800);
+        }
+
+        spinBtn?.addEventListener("click", roll);
+        ball?.addEventListener("click", roll);
+      }
+
+      // ── Compare Dock Manager ─────────────────────────
+      function initCompareDock() {
+        const dock = document.getElementById("compare-dock");
+        const chipsContainer = document.getElementById("dock-chips-container");
+        const countBadge = document.getElementById("dock-count-badge");
+        const clearBtn = document.getElementById("dock-clear-btn");
+        const compareBtn = document.getElementById("dock-compare-btn") as HTMLAnchorElement;
+
+        function getCompareList(): { id: string; name: string }[] {
+          try {
+            return JSON.parse(localStorage.getItem("archivedex_compare_tray") || "[]");
+          } catch {
+            return [];
+          }
+        }
+
+        function setCompareList(list: { id: string; name: string }[]) {
+          localStorage.setItem("archivedex_compare_tray", JSON.stringify(list));
+          updateDock();
+        }
+
+        function updateDock() {
+          const list = getCompareList();
+          if (!dock) return;
+
+          if (list.length === 0) {
+            dock.classList.add("hidden");
+            return;
+          }
+
+          dock.classList.remove("hidden");
+          if (countBadge) countBadge.textContent = `${list.length}/4`;
+
+          if (chipsContainer) {
+            chipsContainer.innerHTML = list.map((item) => `
+              <div class="flex items-center gap-1.5 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-xs font-bold text-cyan-200">
+                <span class="truncate max-w-[120px]">${item.name}</span>
+                <button class="remove-dock-item text-slate-400 hover:text-red-400 font-black ml-1" data-id="${item.id}">✕</button>
+              </div>
+            `).join("");
+
+            chipsContainer.querySelectorAll<HTMLButtonElement>(".remove-dock-item").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const id = btn.dataset.id;
+                const next = getCompareList().filter((x) => x.id !== id);
+                setCompareList(next);
+              });
+            });
+          }
+
+          if (compareBtn) {
+            compareBtn.href = `/compare?games=${list.map((x) => x.id).join(",")}`;
+          }
+        }
+
+        clearBtn?.addEventListener("click", () => {
+          setCompareList([]);
+        });
+
+        // Global function for cards
+        (window as any).toggleCompareItem = function (id: string, name: string) {
+          const list = getCompareList();
+          const exists = list.some((x) => x.id === id);
+          if (exists) {
+            setCompareList(list.filter((x) => x.id !== id));
+            (window as any).showToast?.(`Removed ${name} from Compare`, "remove");
+          } else {
+            if (list.length >= 4) {
+              (window as any).showToast?.("Compare Tray is full (max 4 games)", "info");
+              return;
+            }
+            list.push({ id, name });
+            setCompareList(list);
+            (window as any).showToast?.(`Added ${name} to Compare Dock`, "success");
+          }
+        };
+
+        updateDock();
+      }
+
+      // ── Watchlist Vault Manager ──────────────────────
+      function initWatchlistManager() {
+        const modal = document.getElementById("watchlist-modal");
+        const openBtn = document.getElementById("open-watchlist-btn");
+        const closeBtn = document.getElementById("close-watchlist-btn");
+        const badge = document.getElementById("watchlist-count-badge");
+        const itemsList = document.getElementById("watchlist-items-list");
+        const wishTab = document.getElementById("watchlist-tab-wish");
+        const doneTab = document.getElementById("watchlist-tab-done");
+
+        let activeTab = "wish";
+
+        function getWishlist(): string[] {
+          try {
+            return JSON.parse(localStorage.getItem("archivedex_wishlist") || "[]");
+          } catch {
+            return [];
+          }
+        }
+
+        function getCompleted(): string[] {
+          try {
+            return JSON.parse(localStorage.getItem("archivedex_completed") || "[]");
+          } catch {
+            return [];
+          }
+        }
+
+        function updateBadge() {
+          const w = getWishlist();
+          if (badge) badge.textContent = String(w.length);
+        }
+
+        async function renderList() {
+          const ids = activeTab === "wish" ? getWishlist() : getCompleted();
+          if (!itemsList) return;
+
+          (document.getElementById("wishlist-tab-count") as HTMLElement).textContent = String(getWishlist().length);
+          (document.getElementById("done-tab-count") as HTMLElement).textContent = String(getCompleted().length);
+
+          if (!ids.length) {
+            itemsList.innerHTML = `<div class="p-8 text-center text-xs text-slate-500 font-mono-spec">No games marked in ${activeTab === "wish" ? "Wishlist" : "Completed"}.</div>`;
+            return;
+          }
+
+          const games = await getGamesList();
+          const matches = games.filter((g: any) => ids.includes(g.id));
+
+          itemsList.innerHTML = matches.map((g: any) => `
+            <div class="flex items-center justify-between rounded-xl border border-white/[0.06] bg-[#111520] p-3">
+              <div>
+                <a href="/games/${g.id}" class="text-xs font-bold text-white hover:text-cyan-200">${g.name}</a>
+                <div class="text-[10px] text-slate-500">${g.runtime} · ${g.base}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-mono-spec text-yellow-300">${g.rating}</span>
+                <button class="remove-watch-id text-slate-500 hover:text-red-400 text-xs font-black p-1" data-id="${g.id}">✕</button>
+              </div>
+            </div>
+          `).join("");
+
+          itemsList.querySelectorAll<HTMLButtonElement>(".remove-watch-id").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              const id = btn.dataset.id!;
+              if (activeTab === "wish") {
+                const next = getWishlist().filter((x) => x !== id);
+                localStorage.setItem("archivedex_wishlist", JSON.stringify(next));
+              } else {
+                const next = getCompleted().filter((x) => x !== id);
+                localStorage.setItem("archivedex_completed", JSON.stringify(next));
+              }
+              renderList();
+              updateBadge();
+            });
+          });
+        }
+
+        openBtn?.addEventListener("click", () => {
+          modal?.classList.remove("hidden");
+          modal?.classList.add("flex");
+          renderList();
+        });
+        closeBtn?.addEventListener("click", () => {
+          modal?.classList.add("hidden");
+          modal?.classList.remove("flex");
+        });
+        modal?.addEventListener("click", (e) => {
+          if (e.target === modal) {
+            modal?.classList.add("hidden");
+            modal?.classList.remove("flex");
+          }
+        });
+
+        wishTab?.addEventListener("click", () => {
+          activeTab = "wish";
+          wishTab.className = "rounded-lg bg-rose-500/20 px-3 py-1.5 text-rose-300 font-bold";
+          doneTab!.className = "rounded-lg bg-[#111520] px-3 py-1.5 text-slate-400 hover:text-white font-bold";
+          renderList();
+        });
+        doneTab?.addEventListener("click", () => {
+          activeTab = "done";
+          doneTab!.className = "rounded-lg bg-emerald-500/20 px-3 py-1.5 text-emerald-300 font-bold";
+          wishTab!.className = "rounded-lg bg-[#111520] px-3 py-1.5 text-slate-400 hover:text-white font-bold";
+          renderList();
+        });
+
+        // Global functions for card toggles
+        (window as any).toggleWishlist = function (id: string, name: string) {
+          const list = getWishlist();
+          if (list.includes(id)) {
+            const next = list.filter((x) => x !== id);
+            localStorage.setItem("archivedex_wishlist", JSON.stringify(next));
+            (window as any).showToast?.(`Removed ${name} from Wishlist`, "remove");
+          } else {
+            list.push(id);
+            localStorage.setItem("archivedex_wishlist", JSON.stringify(list));
+            (window as any).showToast?.(`Saved ${name} to Wishlist`, "success");
+          }
+          updateBadge();
+        };
+
+        (window as any).toggleCompleted = function (id: string, name: string) {
+          const list = getCompleted();
+          if (list.includes(id)) {
+            const next = list.filter((x) => x !== id);
+            localStorage.setItem("archivedex_completed", JSON.stringify(next));
+            (window as any).showToast?.(`Unmarked ${name} as Completed`, "remove");
+          } else {
+            list.push(id);
+            localStorage.setItem("archivedex_completed", JSON.stringify(list));
+            (window as any).showToast?.(`Marked ${name} as Completed!`, "success");
+          }
+        };
+
+        updateBadge();
+      }
+
+      // ── Shared Toast System ──────────────────────────
       function showToast(message: string, type: "success" | "info" | "remove" = "info") {
         const stack = document.getElementById("toast-stack");
         if (!stack) return;
@@ -196,65 +1483,15 @@ const categoryNav = [
           el.classList.remove("toast-show");
           setTimeout(() => el.remove(), 320);
         };
-        const timer = setTimeout(remove, 2600);
-        el.addEventListener("click", () => { clearTimeout(timer); remove(); });
+        const timer = setTimeout(remove, 2800);
+        el.addEventListener("click", () => {
+          clearTimeout(timer);
+          remove();
+        });
       }
       (window as any).showToast = showToast;
 
-      // ── Animated counters ──────────────────────────────────
-      function animateCounter(el: HTMLElement) {
-        const target = parseFloat(el.dataset.counter || "0");
-        const duration = parseInt(el.dataset.counterDuration || "1200", 10);
-        const isDecimal = !Number.isInteger(target);
-        const start = performance.now();
-        function tick(now: number) {
-          const p = Math.min((now - start) / duration, 1);
-          const eased = 1 - Math.pow(1 - p, 3);
-          const val = target * eased;
-          el.textContent = isDecimal ? val.toFixed(1) : Math.round(val).toString();
-          if (p < 1) requestAnimationFrame(tick);
-          else el.textContent = isDecimal ? target.toFixed(1) : target.toString();
-        }
-        requestAnimationFrame(tick);
-      }
-
-      function initCounters() {
-        const els = document.querySelectorAll<HTMLElement>("[data-counter]:not([data-counter-done])");
-        if (!els.length) return;
-        const obs = new IntersectionObserver((entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              const target = entry.target as HTMLElement;
-              target.setAttribute("data-counter-done", "1");
-              animateCounter(target);
-              obs.unobserve(target);
-            }
-          });
-        }, { threshold: 0.4 });
-        els.forEach((el) => obs.observe(el));
-      }
-
-      // ── Scroll reveal ──────────────────────────────────────
-      function initScrollReveal() {
-        const els = document.querySelectorAll<HTMLElement>("[data-reveal]:not(.is-revealed)");
-        if (!els.length) return;
-        const obs = new IntersectionObserver((entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add("is-revealed");
-              obs.unobserve(entry.target);
-            }
-          });
-        }, { threshold: 0.12, rootMargin: "0px 0px -60px 0px" });
-        els.forEach((el, i) => {
-          if (!el.style.getPropertyValue("--reveal-delay")) {
-            el.style.setProperty("--reveal-delay", `${Math.min(i % 8, 8) * 60}ms`);
-          }
-          obs.observe(el);
-        });
-      }
-
-      // ── 3D card tilt (delegated, desktop pointer only) ─────
+      // ── 3D Card Tilt Handler ─────────────────────────
       function initTilt() {
         const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
         if (!fine) return;
@@ -263,97 +1500,138 @@ const categoryNav = [
         document.addEventListener("mousemove", (e) => {
           const card = (e.target as HTMLElement)?.closest?.(".tilt-card") as HTMLElement | null;
           if (!card) {
-            if (current) { current.style.transform = ""; current = null; }
+            if (current) {
+              current.style.transform = "";
+              current = null;
+            }
             return;
           }
           current = card;
           const rect = card.getBoundingClientRect();
           const x = e.clientX - rect.left;
           const y = e.clientY - rect.top;
-          const rotateX = ((y - rect.height / 2) / (rect.height / 2)) * -5;
-          const rotateY = ((x - rect.width / 2) / (rect.width / 2)) * 5;
+          const rotateX = ((y - rect.height / 2) / (rect.height / 2)) * -6;
+          const rotateY = ((x - rect.width / 2) / (rect.width / 2)) * 6;
           card.style.transform = `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
           const glare = card.querySelector<HTMLElement>(".tilt-glare");
           if (glare) glare.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.18), transparent 55%)`;
         }, { passive: true });
 
         document.addEventListener("mouseleave", () => {
-          if (current) { current.style.transform = ""; current = null; }
+          if (current) {
+            current.style.transform = "";
+            current = null;
+          }
         }, true);
       }
 
-      // ── Mobile menu ─────────────────────────────────────────
-      function closeMobileMenu() {
-        document.getElementById("mobile-menu")?.classList.add("hidden");
-        document.getElementById("icon-open")?.classList.remove("hidden");
-        document.getElementById("icon-close")?.classList.add("hidden");
+      // ── Scroll Reveal & Counters ────────────────────
+      function initScrollReveal() {
+        const reveals = document.querySelectorAll<HTMLElement>("[data-reveal]");
+        if (!reveals.length) return;
+
+        const mainScroll = document.getElementById("main-scroll-container");
+
+        if (!("IntersectionObserver" in window)) {
+          reveals.forEach((el) => el.classList.add("is-revealed"));
+          return;
+        }
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add("is-revealed");
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { 
+            root: mainScroll || null,
+            threshold: 0.05, 
+            rootMargin: "0px 0px 80px 0px" 
+          }
+        );
+
+        reveals.forEach((el) => {
+          const containerRect = mainScroll 
+            ? mainScroll.getBoundingClientRect() 
+            : { top: 0, bottom: window.innerHeight };
+          const rect = el.getBoundingClientRect();
+          if (rect.top < containerRect.bottom && rect.bottom > containerRect.top) {
+            el.classList.add("is-revealed");
+          } else {
+            observer.observe(el);
+          }
+        });
+
+        // Safety fallback: ensure nothing stays invisible if observer lags
+        setTimeout(() => {
+          reveals.forEach((el) => el.classList.add("is-revealed"));
+        }, 1000);
       }
 
-      function initMobileMenu() {
-        const btn       = document.getElementById("mobile-menu-btn");
-        const menu      = document.getElementById("mobile-menu");
-        const iconOpen  = document.getElementById("icon-open");
-        const iconClose = document.getElementById("icon-close");
-        btn?.addEventListener("click", () => {
-          const isOpen = !menu?.classList.contains("hidden");
-          menu?.classList.toggle("hidden", isOpen);
-          iconOpen?.classList.toggle("hidden", !isOpen);
-          iconClose?.classList.toggle("hidden", isOpen);
+      function initCounters() {
+        const counters = document.querySelectorAll<HTMLElement>("[data-counter]");
+        counters.forEach((el) => {
+          const target = parseInt(el.dataset.counter || "0", 10);
+          if (isNaN(target)) return;
+          const duration = parseInt(el.dataset.counterDuration || "800", 10);
+          const startTime = performance.now();
+          function update(now: number) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+            const current = Math.round(ease * target);
+            el.textContent = current.toLocaleString();
+            if (progress < 1) requestAnimationFrame(update);
+          }
+          requestAnimationFrame(update);
         });
       }
 
-      // ── Active category highlight ──────────────────────────
-      function initCategoryHighlight() {
-        const params = new URLSearchParams(window.location.search);
-        const activeCat = window.location.pathname === "/library" ? params.get("category") : null;
-        document.querySelectorAll<HTMLAnchorElement>(".cat-nav-link").forEach((link) => {
-          const on = !!activeCat && link.dataset.cat === activeCat;
-          link.classList.toggle("bg-slate-800/70", on);
-          link.classList.toggle("text-cyan-300", on);
-          link.classList.toggle("text-slate-500", !on);
-        });
-      }
-
-      // ── Nav progress bar across transitions ────────────────
-      function initNavProgress() {
-        const bar = document.getElementById("nav-progress");
-        if (!bar) return;
-        document.addEventListener("astro:before-preparation", () => {
-          bar.classList.add("active");
-          bar.style.width = "30%";
-        });
-        document.addEventListener("astro:after-preparation", () => {
-          bar.style.width = "75%";
-        });
-        document.addEventListener("astro:page-load", () => {
-          bar.style.width = "100%";
-          setTimeout(() => {
-            bar.classList.remove("active");
-            bar.style.width = "0%";
-          }, 280);
-        });
-      }
-
-      // ── Master init, runs on first load + every transition ─
-      // (only targets elements that live INSIDE <slot/> page content,
-      //  which is fully replaced on every navigation)
+      // ── Master Init ──────────────────────────────────
       function initAll() {
-        closeMobileMenu(); // header persists across transitions, so reset it whenever a navigation completes — otherwise tapping a link inside the open menu leaves it open on the destination page
-        initCounters();
+        updateActiveNav();
+        initThemeSwitcher();
+        initLeftRail();
+        initRightRail();
+        initCommandPalette();
+        initGacha();
+        initCompareDock();
+        initWatchlistManager();
         initScrollReveal();
-        initCategoryHighlight();
+        initCounters();
       }
 
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAll);
+      } else {
+        initAll();
+      }
       document.addEventListener("astro:page-load", initAll);
 
-      // Delegated, document-level listeners AND anything targeting
-      // elements inside the persisted <header> only need to bind once —
-      // guard against double-binding in case this script block re-runs.
-      if (!(window as any).__adexOnceInit) {
-        (window as any).__adexOnceInit = true;
+      if (!(window as any).__adexShellInit) {
+        (window as any).__adexShellInit = true;
         initTilt();
-        initNavProgress();
-        initMobileMenu(); // button lives in transition:persist header
+        window.addEventListener("popstate", updateActiveNav);
+
+        // ── Global Card Click Delegation ──────────────────
+        document.addEventListener("click", (e) => {
+          const target = e.target as HTMLElement | null;
+          if (!target) return;
+          // If clicked inside interactive buttons, tag links, or inputs, do not intercept
+          if (target.closest("button, .quick-actions-bar, a[href*='tag='], a[href*='category='], input, select, textarea")) {
+            return;
+          }
+          const card = target.closest<HTMLElement>("[data-card-href]");
+          if (card) {
+            const href = card.getAttribute("data-card-href");
+            if (href) {
+              window.location.href = href;
+            }
+          }
+        });
       }
     </script>
   </body>

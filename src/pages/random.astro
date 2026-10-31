@@ -24,9 +24,9 @@ const gameIds = games.map((g) => g.id);
       }
       body {
         background:
-          radial-gradient(circle at 30% 30%, rgba(34,211,238,0.10), transparent 30rem),
-          radial-gradient(circle at 70% 70%, rgba(168,85,247,0.10), transparent 30rem),
-          #070914;
+          radial-gradient(circle at 30% 30%, var(--hero-glow-1, rgba(34,211,238,0.10)), transparent 30rem),
+          radial-gradient(circle at 70% 70%, var(--hero-glow-2, rgba(168,85,247,0.10)), transparent 30rem),
+          var(--surface-canvas, #070914);
       }
       .die {
         font-size: 2.75rem;

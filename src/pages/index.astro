@@ -62,15 +62,15 @@ const tips = [
 ];
 ---
 
-<BaseLayout title="ArchiveDex · Pokémon Fan Project Archive" description="Premium discovery archive for Pokémon ROM hacks, fangames, PMD hacks, and fan projects.">
+<BaseLayout title="ArchiveDex · Pokémon ROM Hack & Fan Game Archive" description="The definitive museum-grade archive and discovery launcher for Pokémon ROM hacks, fan games, and preservation projects." isHome={true}>
 
   <!-- ══════════════════════════════════════════ -->
   <!-- WELCOME MODAL                              -->
   <!-- ══════════════════════════════════════════ -->
   <div id="welcome-overlay" class="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-md" style="display:none">
     <div class="glass-panel relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] p-8">
-      <div class="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_30%_20%,rgba(34,211,238,0.16),transparent_60%)]"></div>
-      <div class="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_80%_80%,rgba(168,85,247,0.12),transparent_55%)]"></div>
+      <div class="pointer-events-none absolute inset-0 rounded-[2rem] theme-modal-glow-1"></div>
+      <div class="pointer-events-none absolute inset-0 rounded-[2rem] theme-modal-glow-2"></div>
       <div class="relative">
         <div class="mb-7 flex items-start justify-between gap-4">
           <div>
@@ -117,8 +117,8 @@ const tips = [
   <!-- ══════════════════════════════════════════ -->
   <div id="lucky-overlay" class="fixed inset-0 z-[998] flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-md" style="display:none">
     <div class="glass-panel relative w-full max-w-lg rounded-[2rem] p-8">
-      <div class="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_20%_30%,rgba(168,85,247,0.20),transparent_55%)]"></div>
-      <div class="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_80%_70%,rgba(34,211,238,0.12),transparent_50%)]"></div>
+      <div class="pointer-events-none absolute inset-0 rounded-[2rem] theme-modal-glow-2"></div>
+      <div class="pointer-events-none absolute inset-0 rounded-[2rem] theme-modal-glow-1"></div>
       <div class="relative">
         <div class="mb-6 flex items-start justify-between gap-4">
           <div>
@@ -166,9 +166,9 @@ const tips = [
     <section class="mx-auto max-w-7xl px-6 py-10">
       <div class="glass-panel relative overflow-hidden rounded-[2rem] spotlight-active">
         <!-- Background glows -->
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_75%_30%,rgba(34,211,238,0.22),transparent_26rem)]"></div>
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_88%_15%,rgba(168,85,247,0.18),transparent_22rem)]"></div>
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_8%_85%,rgba(245,158,11,0.07),transparent_20rem)]"></div>
+        <div class="pointer-events-none absolute inset-0 theme-hero-glow-1"></div>
+        <div class="pointer-events-none absolute inset-0 theme-hero-glow-2"></div>
+        <div class="pointer-events-none absolute inset-0 theme-hero-glow-3"></div>
 
         <!-- Cursor spotlight -->
         <div class="spotlight"></div>
@@ -211,8 +211,8 @@ const tips = [
             <!-- H1 — staggered per-word reveal -->
             <h1 class="text-6xl font-black leading-[0.92] tracking-tight md:text-7xl">
               <span class="block" data-reveal style="--reveal-delay:0ms"><span class="text-white">Discover.</span></span>
-              <span class="block" data-reveal style="--reveal-delay:90ms"><span class="text-cyan-300 text-glow-cyan">Compare.</span></span>
-              <span class="block" data-reveal style="--reveal-delay:180ms"><span class="text-violet-300 text-glow-violet">Preserve.</span></span>
+              <span class="block" data-reveal style="--reveal-delay:90ms"><span class="text-cyan-300 text-glow-primary">Compare.</span></span>
+              <span class="block" data-reveal style="--reveal-delay:180ms"><span class="text-violet-300 text-glow-secondary">Preserve.</span></span>
             </h1>
 
             <p class="mt-6 max-w-lg text-lg font-bold leading-7 text-slate-300" data-reveal style="--reveal-delay:240ms">
@@ -253,8 +253,8 @@ const tips = [
 
           <!-- Right: visual panel -->
           <div class="relative min-h-[380px] overflow-hidden rounded-[1.5rem] border border-slate-700/60 bg-slate-950/40 p-6" data-reveal="right" style="--reveal-delay:120ms">
-            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(34,211,238,0.20),transparent_16rem)]"></div>
-            <div class="absolute inset-0 bg-[radial-gradient(circle_at_60%_75%,rgba(168,85,247,0.14),transparent_18rem)]"></div>
+            <div class="pointer-events-none absolute inset-0 theme-panel-glow-1"></div>
+            <div class="pointer-events-none absolute inset-0 theme-panel-glow-2"></div>
 
             <div class="relative flex h-full flex-col justify-between gap-6">
               <div class="flex items-start justify-between gap-4">
@@ -365,7 +365,7 @@ const tips = [
               <!-- Mini cover -->
               <div class="relative flex h-16 items-center justify-center overflow-hidden" style={`background:linear-gradient(135deg,${col.from},${col.to})`}>
                 <span class="text-4xl opacity-20 select-none">{col.icon}</span>
-                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-[rgba(7,9,20,0.85)]"></div>
+                <div class="absolute inset-0 index-media-fade bg-gradient-to-b from-transparent to-[rgba(7,9,20,0.85)]"></div>
               </div>
               <div class="bg-[#0d1117] p-3">
                 <div class="text-xs font-black text-white truncate">{col.title}</div>
@@ -612,6 +612,11 @@ const tips = [
     document.addEventListener("keydown",(e)=>{if(e.key==="Escape"&&luckyOverlay.style.display!=="none")hideLucky();});
   } // end initHomePage
 
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initHomePage);
+  } else {
+    initHomePage();
+  }
   document.addEventListener("astro:page-load", initHomePage);
 </script>
 
